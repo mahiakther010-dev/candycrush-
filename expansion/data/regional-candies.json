@@ -1,0 +1,96 @@
+{
+  "version": "1.0.0",
+  "description": "Original South Asian secular fruit and dessert-inspired candy items for the 50-level expansion.",
+  "candies": [
+    {
+      "candyId": "CANDY_HIMSAGAR_MANGO",
+      "name": "Himsagar Mango Drop",
+      "category": "fruit_candy",
+      "colorFamily": "golden_yellow",
+      "silhouette": "Plump curved mango teardrop with glossy saffron-gold glaze and mint leaf tip",
+      "regionalOrigin": "Rajshahi (Bangladesh) & Malda (West Bengal, India) mango orchards",
+      "specialBoardProperty": "Matching 4+ Mango Drops near Sticky Sap or Mud Bog coats 1 adjacent tile in slick nectar, speeding up falling mission keys by 2x."
+    },
+    {
+      "candyId": "CANDY_DINAJPUR_LITCHI",
+      "name": "Dinajpur Ruby Litchi",
+      "category": "fruit_candy",
+      "colorFamily": "crimson_red",
+      "silhouette": "Textured crimson-pink shell cracked slightly at the crown to reveal a glowing pearlescent white core",
+      "regionalOrigin": "Dinajpur (Bangladesh) & Muzaffarpur (Bihar, India) summer litchi groves",
+      "specialBoardProperty": "Generates +20% bonus rescue winch charge when matched in vertical columns."
+    },
+    {
+      "candyId": "CANDY_BARISAL_GUAVA",
+      "name": "Floating Market Guava Crisp",
+      "category": "fruit_candy",
+      "colorFamily": "emerald_green",
+      "silhouette": "Beveled emerald-rind round medallion with coral-pink inner pulp and tiny golden seed dots",
+      "regionalOrigin": "Barisal backwater floating guava markets (Bangladesh) & Allahabad orchards (India)",
+      "specialBoardProperty": "Naturally buoyant in Monsoon Floodwater rows — resists sinking traps and reinforces wooden bridges."
+    },
+    {
+      "candyId": "CANDY_MADHUPUR_JACKFRUIT",
+      "name": "Honeyed Jackfruit Pod",
+      "category": "fruit_candy",
+      "colorFamily": "warm_amber",
+      "silhouette": "Glossy ribbed golden-amber fruit bulb with plump segmented ridges",
+      "regionalOrigin": "Madhupur & Gazipur orchards (Bangladesh) & Kerala/Assam jackfruit groves (India)",
+      "specialBoardProperty": "Heavyweight candy: deals +1 bonus impact vibration to adjacent Bamboo Cages when matched in L/T shapes."
+    },
+    {
+      "candyId": "CANDY_KALOJAM_JAMUN",
+      "name": "Monsoon Jamun Berry",
+      "category": "fruit_candy",
+      "colorFamily": "royal_purple",
+      "silhouette": "Smooth elongated deep-violet plum gem with iridescent indigo specular rim",
+      "regionalOrigin": "Rural monsoon orchard avenues across Bengal and northern India",
+      "specialBoardProperty": "Releases cooling purple juice splash on match that neutralizes 1 stack of Chili-Sugar Ember heat."
+    },
+    {
+      "candyId": "CANDY_TENDER_COCONUT",
+      "name": "Daab Coconut Splash Cube",
+      "category": "fruit_candy",
+      "colorFamily": "sky_blue",
+      "silhouette": "Rounded aqua-green tender coconut shell with a glossy white cream rim and water-droplet emblem",
+      "regionalOrigin": "St. Martin's Island, Cox's Bazar & coastal Malabar/Andaman groves",
+      "specialBoardProperty": "Sprays clear coconut water 1 tile orthogonally when popped inside a Wrapped combo, washing away Sticky Slime."
+    },
+    {
+      "candyId": "CANDY_DARJEELING_ORANGE",
+      "name": "Foothill Mandarin Crescent",
+      "category": "fruit_candy",
+      "colorFamily": "bright_orange",
+      "silhouette": "Translucent tangerine citrus wedge with glowing pulp vesicles",
+      "regionalOrigin": "Sylhet citrus hills & Darjeeling/Sikkim foothill orchards",
+      "specialBoardProperty": "Zest burst clears Tea Mist clouds in a 1-tile radius around the match."
+    },
+    {
+      "candyId": "CANDY_PISTACHIO_KULFI",
+      "name": "Saffron Pistachio Kulfi",
+      "category": "dessert_special_candy",
+      "colorFamily": "frost_mint",
+      "silhouette": "Faceted conical creamy kulfi pop speckled with emerald pistachio shards on a tiny bamboo stick",
+      "regionalOrigin": "Old Dhaka & Delhi/Kolkata summer street kulfi carts",
+      "specialBoardProperty": "Crafted or spawned in thermal levels: matching chills approaching Lava Crawlers (-8% danger) or freezes 1 Caramel Lava spout for 2 turns."
+    },
+    {
+      "candyId": "CANDY_CRISPY_JILAPI",
+      "name": "Golden Syrup Jilapi Coil",
+      "category": "dessert_special_candy",
+      "colorFamily": "amber_gold",
+      "silhouette": "Luminous 3D pretzel-spiral coil of crispy saffron-orange syrup tubing",
+      "regionalOrigin": "Riverbank fairs and everyday sweet shops across Bangladesh and India",
+      "specialBoardProperty": "Acts as a spiral energy relay: when hit by any Striped blast, re-emits a ring pulse hitting all 8 surrounding tiles."
+    },
+    {
+      "candyId": "CANDY_SPONGY_RASGULLA",
+      "name": "Cloud-Soft Rasgulla Orb",
+      "category": "dessert_special_candy",
+      "colorFamily": "pearl_white",
+      "silhouette": "Luminous dimpled snow-white sponge sphere glistening with clear sugar syrup",
+      "regionalOrigin": "Bengal dairy sweetmaking tradition (Bangladesh & West Bengal)",
+      "specialBoardProperty": "Cushion physics: matching Rasgulla Orbs inflates Mochi's safety airbag bumper, absorbing 1 falling shale rock or crusher shock."
+    }
+  ]
+}

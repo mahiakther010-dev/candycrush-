@@ -1,0 +1,302 @@
+{
+  "version": "1.0.0",
+  "totalEnemies": 12,
+  "totalBosses": 6,
+  "enemies": [
+    {
+      "enemyId": "ENEMY_GREEN_SERPENT",
+      "name": "Emerald Gummy Serpent",
+      "role": "Recurring Signature Pursuer",
+      "firstAppearsCampaignLevel": 1,
+      "behavior": "Slithers steadily through curved orchard chutes, tea aqueducts, and cavern tunnels toward Mochi's chamber.",
+      "attackPattern": "Continuous spline advance (+1.8% to +2.4% danger/sec); lunges faster (+35% burst) for 2 seconds if the player makes 2 invalid swaps in a row.",
+      "weakness": "Sensitive to Cryo Freeze Blasts, Kulfi matches, and counterweight gate slams.",
+      "counterStrategy": "Prioritize drain-column matches and keep a Freeze Blast or Blue/Kulfi match ready when danger passes 70%.",
+      "visualIdentity": "Segmented glossy emerald-lime dragon-serpent with expressive yellow slit-eyes, dorsal lime ridges, and comical chomping white fangs.",
+      "gameplayInteraction": "Directly drives the real-time Danger Meter and triggers Mochi's nervous/scared animations as distance shrinks.",
+      "defeatAnimationConcept": "Gets bonked harmlessly on the snout by the closing rescue gate, sees cartoon stars, and coils backward down the chute."
+    },
+    {
+      "enemyId": "ENEMY_GLUTTON_CHOMPER",
+      "name": "Golla-Gulp (Giant Candy-Eating Creature)",
+      "role": "Objective Competitor",
+      "firstAppearsCampaignLevel": 8,
+      "behavior": "Plump, wide-mouthed magenta-and-cream puff-beast perched beside the puzzle board, eyeing the player's target fruit candies!",
+      "attackPattern": "Every 3 moves, extends a stretchy chameleon-like tongue onto the board to gobble up to 3 candies of the player's Main Objective fruit color—advancing its belly-meter toward Mochi's platform!",
+      "weakness": "Gets a comical 'sour brain-freeze' hiccup if tricked into swallowing a Striped Candy, Wrapped Candy, or tangy Darjeeling Orange cluster!",
+      "counterStrategy": "Match away target fruits before its 3-turn tongue telegraph lands, OR slide a Striped/Wrapped candy onto its targeted tile so it swallows a fizzy pop and spits back +5 bonus fruits!",
+      "visualIdentity": "Round bouncy berry-colored gourmand creature wearing a tiny chef's bib with expressive hungry eyes.",
+      "gameplayInteraction": "Marks 3 target board cells with a fork-and-spoon reticle 1 turn before slurping them.",
+      "defeatAnimationConcept": "Burps out a shower of sparkling rainbow candies, pats its full round belly happily, and naps peacefully."
+    },
+    {
+      "enemyId": "ENEMY_CLOCKWORK_SENTINEL",
+      "name": "Brass Clockwork Automaton",
+      "role": "Turn-Based Mechanical Guardian",
+      "firstAppearsCampaignLevel": 13,
+      "behavior": "Polished brass-and-teakwood wind-up toy guardian patrolling warehouse and carnival tracks strictly on player move ticks (no real-time rush—pure tactical chess!).",
+      "attackPattern": "Advances 1 track node per player move; every 4th move, turns its wind-up key to lock 2 board tiles in Wrought Metal Chains.",
+      "weakness": "Overwinds and stalls for 2 turns when hit by a Striped Laser aligned with its column or jammed with Riverboat Winch.",
+      "counterStrategy": "Take time to plan high-efficiency combos (since it only moves when you move!) and snipe its column with vertical Striped blasts.",
+      "visualIdentity": "Charming vintage brass clockwork knight-bot with a spinning golden dorsal wind-up key and glowing amber monocle.",
+      "gameplayInteraction": "Converts real-time panic into pure move-efficiency survival puzzles.",
+      "defeatAnimationConcept": "Its dorsal wind-up key spins harmlessly free with a playful cuckoo-clock spring boing as it bows politely."
+    },
+    {
+      "enemyId": "ENEMY_FROST_YETI_GOLEM",
+      "name": "Foothill Snow-Kulfi Golem",
+      "role": "Board Freezer",
+      "firstAppearsCampaignLevel": 36,
+      "behavior": "Lumbering, goofy snow-and-pistachio-ice creature stomping down Himalayan foothill ledges.",
+      "attackPattern": "Inhales deeply for 1 turn, then exhales a frosty gale across a 2x3 board zone, encasing candies in `OBS_GLACIER_ICE_BARRIER`.",
+      "weakness": "Immune to Freeze Blast! Instead, melts and shrinks rapidly when countered by warm `CANDY_CRISPY_JILAPI` coils, Orange/Litchi matches, or Chili-Sugar warmth.",
+      "counterStrategy": "Do NOT bring cryo tools—equip Artisan Mallet or Jilapi Spark Bomb and match warm red/orange candies to melt its frost armor.",
+      "visualIdentity": "Fluffy snow-white and mint-ice golem with waffle-cone shoulder pads and frosty eyebrows.",
+      "gameplayInteraction": "Subverts player reliance on Freeze Blast by demanding warm-color combos instead.",
+      "defeatAnimationConcept": "Melts down into a cheerful miniature snowman waving a tiny waffle flag."
+    },
+    {
+      "enemyId": "ENEMY_MOLTEN_CRAWLER",
+      "name": "Sizzling Caramel Salamander",
+      "role": "Thermal Spreader",
+      "firstAppearsCampaignLevel": 22,
+      "behavior": "Glowing amber-crust lizard skittering along cauldron rims and bridge ropes.",
+      "attackPattern": "Drops 1 `OBS_CHILI_EMBER_FIRE` spark onto the board every 8 seconds while heating the Caramel Lava beneath Mochi.",
+      "weakness": "Takes double pushback from `CANDY_TENDER_COCONUT`, `CANDY_PISTACHIO_KULFI`, Kulfi Ice Cannon, and Tender Coconut Extinguisher.",
+      "counterStrategy": "Cool its glowing shell with blue/aqua matches or Foam Extinguisher to turn its shell into brittle sugar-glass, then shatter with any combo.",
+      "visualIdentity": "Translucent glowing butterscotch-orange gecko with flickering cartoon flame tail.",
+      "gameplayInteraction": "Links board fire-control directly to arena lava-rise speed.",
+      "defeatAnimationConcept": "Cools into a shiny harmless amber candy statue that slides smoothly off the ledge."
+    },
+    {
+      "enemyId": "ENEMY_JAWBREAKER_PANGOLIN",
+      "name": "Armored Jawbreaker Roller",
+      "role": "Stance-Switching Charger",
+      "firstAppearsCampaignLevel": 29,
+      "behavior": "Alternates between curled 'Invulnerable Rolling Ball' stance (2 turns) and uncurled 'Dizzy Breather' stance (2 turns).",
+      "attackPattern": "While curled, rolls rapidly down ramps and shrugs off normal blasts; shakes loose 2 board blockers on wall impact.",
+      "weakness": "Deflecting its roll with a `TOOL_RASGULLA_BOUNCE_PAD` or hitting it WHILE uncurled deals 3x pushback!",
+      "counterStrategy": "Save Special Candies during its curled roll phase, then unleash a chain cascade the moment it uncurls!",
+      "visualIdentity": "Cute roly-poly creature with concentric rainbow jawbreaker armor plates.",
+      "gameplayInteraction": "Teaches burst-damage timing windows instead of mindless spamming.",
+      "defeatAnimationConcept": "Bounces harmlessly off a spongy cushion like a pinball and rolls cheering into a hammock."
+    },
+    {
+      "enemyId": "ENEMY_SYRUP_OOZE_BLOB",
+      "name": "Sticky Gur-Slime Blob",
+      "role": "Splitting Hazard",
+      "firstAppearsCampaignLevel": 18,
+      "behavior": "Bouncy lime-molasses jelly creature oozing down bamboo chutes.",
+      "attackPattern": "Coats 2 board candies in `OBS_STICKY_MANGO_SLIME` every 9 seconds; if hit by a raw Bomb without water, splits into 2 smaller fast blobs!",
+      "weakness": "Dissolves cleanly without splitting when hit by `TOOL_MONSOON_WATER_BLASTER` or `CANDY_TENDER_COCONUT` splash matches.",
+      "counterStrategy": "Use hydro/coconut cleanses rather than dry explosives.",
+      "visualIdentity": "Wiggly translucent chartreuse jelly cube with two floating googly eyes inside.",
+      "gameplayInteraction": "Rewards elemental tool pairing (`TOOL_MONSOON_WATER_BLASTER`).",
+      "defeatAnimationConcept": "Washes away into sparkling clean bubbles leaving behind a shiny Rainbow Bomb on the board."
+    },
+    {
+      "enemyId": "ENEMY_MYNAH_GLIDER_THIEF",
+      "name": "Acrobatic Canopy Glider",
+      "role": "Aerial Item Snatcher",
+      "firstAppearsCampaignLevel": 23,
+      "behavior": "Mischievous Mechanical-Winged Sugar Glider swooping over Litchi Orchards and River Markets.",
+      "attackPattern": "Hovers above a Special Candy or Golden Key for 2 turns (casting a circular shadow), then dives to carry it 2 rows UPWARD away from the exit!",
+      "weakness": "Blown off-course immediately by `TOOL_TEA_LEAF_GUST_FAN` or matching candies directly inside its shadow reticle.",
+      "counterStrategy": "Watch for the circular shadow reticle on Key columns and match beneath the Key before the 2-turn dive completes.",
+      "visualIdentity": "Playful aviator-goggled glider critter carrying a tiny woven fruit basket.",
+      "gameplayInteraction": "Creates vertical tug-of-war on Key-drop missions.",
+      "defeatAnimationConcept": "Gets spun around by a gust of wind, drops a bonus fruit bundle, and glides off waving."
+    },
+    {
+      "enemyId": "ENEMY_QUARTZ_WARDEN",
+      "name": "Faceted Crystal Sentinel",
+      "role": "Directional Shield Tank",
+      "firstAppearsCampaignLevel": 47,
+      "behavior": "Floating geometric crystal construct guarding Chapter 10 cavern bridges.",
+      "attackPattern": "Holds a reflective front shield that blocks vertical beams from below while firing slow laser locks onto the board.",
+      "weakness": "Vulnerable from the SIDES—bank a Striped laser off `OBS_CRYSTAL_PRISM_MIRROR` or `OBS_COCONUT_HUSK_BUMPER` to strike its unshielded flank!",
+      "counterStrategy": "Use board prisms and angled bumpers to route horizontal beams into its crystal core.",
+      "visualIdentity": "Sleek hovering amethyst-and-gold polyhedron golem.",
+      "gameplayInteraction": "Turns match-3 laser routing into geometric trick-shot puzzles.",
+      "defeatAnimationConcept": "De-materializes into a harmonic chord of floating prism sparkles."
+    },
+    {
+      "enemyId": "ENEMY_MANGROVE_ROOT_CRAWLER",
+      "name": "Tangle-Vine Stilt Crawler",
+      "role": "Bridge Saboteur",
+      "firstAppearsCampaignLevel": 19,
+      "behavior": "Long-legged wooden stilt-bug striding across Sundarbans creeks.",
+      "attackPattern": "Wraps vine tendrils around 1 built bridge plank or board column, locking it in `OBS_BAMBOO_WOOD_CAGE`.",
+      "weakness": "Dazzled by `TOOL_LANTERN_FLARE_BEACON` and knocked back by heavy `CANDY_MADHUPUR_JACKFRUIT` L/T matches.",
+      "counterStrategy": "Keep Firefly Beacon or Jackfruit clusters ready to snap its stilt-vines.",
+      "visualIdentity": "Whimsical animated driftwood-and-leaf stilt walker with glowing amber lantern antennae.",
+      "gameplayInteraction": "Threatens already-completed bridge segments if player stalls.",
+      "defeatAnimationConcept": "Tangles its own stilts comically and tumbles onto a soft moss bank."
+    },
+    {
+      "enemyId": "ENEMY_MONSOON_WHIRLPOOL_EEL",
+      "name": "Swirling River-Current Eel",
+      "role": "Current Manipulator",
+      "firstAppearsCampaignLevel": 38,
+      "behavior": "Playful electric-blue ribbon eel circling Mochi's ferry boat during monsoon crossings.",
+      "attackPattern": "Spins a mini-whirlpool every 2 moves that rotates a 2x2 block of board candies clockwise AND tugs Mochi's ferry backward 10%.",
+      "weakness": "Calmed by matching `CANDY_BARISAL_GUAVA` (buoyant fruit) or stunning with Striped lightning.",
+      "counterStrategy": "Anticipate its clockwise 2x2 board rotation—clever players let the eel rotate a 4th candy into a 5-in-a-row match!",
+      "visualIdentity": "Sleek bioluminescent turquoise ribbon-fish with golden whisker fins.",
+      "gameplayInteraction": "Introduces rotational tile manipulation on flooded boards.",
+      "defeatAnimationConcept": "Leaps in a cheerful dolphin-arc over the ferry leaving a rainbow spray."
+    },
+    {
+      "enemyId": "ENEMY_MIRAGE_CHAMELEON",
+      "name": "Orchard Prism Chameleon",
+      "role": "Color-Shifting Stalker",
+      "firstAppearsCampaignLevel": 42,
+      "behavior": "Perched on overhanging branches, shifting its glossy skin color after every turn to match one of the active board candy colors!",
+      "attackPattern": "Advances stealthily unless players match candies of its CURRENT displayed skin color; matching wrong colors gives 0 pushback!",
+      "weakness": "Rainbow Color Bomb hits ALL colors at once, or `TOOL_LANTERN_FLARE_BEACON` locks its color for 3 turns.",
+      "counterStrategy": "Watch its bright crest color badge in the arena and match that exact fruit color (or paint 3 candies with `TOOL_SYRUP_CONDUIT_BRUSH`).",
+      "visualIdentity": "Expressive curly-tailed cartoon chameleon with kaleidoscope crystal scales.",
+      "gameplayInteraction": "Demands real-time attention to enemy visual state before choosing which match to take.",
+      "defeatAnimationConcept": "Blushes bright polka-dot pink, tips its leaf hat, and zips up into the canopy."
+    }
+  ],
+  "bosses": [
+    {
+      "bossId": "BOSS_01_MANGROVE_SERPENT_MATRIARCH",
+      "name": "Mist-Coiled Tea Serpent Matriarch",
+      "campaignLevel": 16,
+      "expansionLevel": 10,
+      "chapterId": "CHAPTER_02",
+      "healthPool": 120,
+      "phases": [
+        {
+          "phase": 1,
+          "hpRange": "100%–50%",
+          "mechanic": "Slithers through twin Sylhet waterwheel aqueducts while exhaling `OBS_TEA_MIST_CLOUD` over 3x3 board zones. Matching Mandarin Oranges or firing Gust Fan clears mist and exposes her golden collar target."
+        },
+        {
+          "phase": 2,
+          "hpRange": "50%–0%",
+          "mechanic": "Reverses the Rotating Waterwheel Gates every turn and spits Sticky Sap onto drain columns. Dropping 2 Brass Tea-Chest Keys while draining 40 marbles triggers the Giant Waterwheel Splashdown!"
+        }
+      ],
+      "weakness": "Mandarin Orange zest bursts + Striped blasts aligned with open Waterwheel paddles.",
+      "defeatSequence": "Swept gently down the tea-terrace flume slide in a giant sparkling bubble."
+    },
+    {
+      "bossId": "BOSS_02_ROYAL_MANGROVE_CRAB_MECH",
+      "name": "Captain Clamp — Brass Mangrove Crab-Sub",
+      "campaignLevel": 26,
+      "expansionLevel": 20,
+      "chapterId": "CHAPTER_04",
+      "healthPool": 160,
+      "phases": [
+        {
+          "phase": 1,
+          "hpRange": "100%–55%",
+          "mechanic": "Armored brass crab-craft pinches Mochi's orchard rope-bridge with Left & Right Mechanical Claws (represented by 2 armored `OBS_BRASS_TREASURE_TRUNK` locks on cols 1 & 6)."
+        },
+        {
+          "phase": 2,
+          "hpRange": "55%–0%",
+          "mechanic": "Launches 2 Canopy Glider drones to lift your Keys while rising mud bubbles below. Unlocking both Claw Trunks drops its periscope shield so Special Candies deal full damage!"
+        }
+      ],
+      "weakness": "Jackfruit L/T shockwaves + Prism/Wrapped blasts once both Claw Trunks unlock.",
+      "defeatSequence": "Pops confetti from its brass smokestack and sputters backward into the creek."
+    },
+    {
+      "bossId": "BOSS_03_RAJA_GOLLA_DEVOURER",
+      "name": "Maharaja Gulp — The Grand Sweet-Guzzler",
+      "campaignLevel": 36,
+      "expansionLevel": 30,
+      "chapterId": "CHAPTER_06",
+      "healthPool": 200,
+      "phases": [
+        {
+          "phase": 1,
+          "hpRange": "100%–60%",
+          "mechanic": "Inhales whole rows of candies toward its coral-cove barge while Coconut Husk Bumpers guard the board flanks."
+        },
+        {
+          "phase": 2,
+          "hpRange": "60%–0%",
+          "mechanic": "Opens its cavernous mouth for a 'Mega-Slurp' every 3 turns: players must bank Striped lasers off the 45-degree Coconut Bumpers OR feed it 3 Wrapped/Jilapi fizz-bombs to overfill its sweet-meter!"
+        }
+      ],
+      "weakness": "Feeding Special Candies into its telegraphed slurp beam deals 40 stun damage per special!",
+      "defeatSequence": "Floats skyward like a giant cheerful parade balloon after eating too many fizzy candies."
+    },
+    {
+      "bossId": "BOSS_04_HIMALAYAN_AVALANCHE_TITAN",
+      "name": "Kanchen-Frost — The Glacier Yeti Colossus",
+      "campaignLevel": 46,
+      "expansionLevel": 40,
+      "chapterId": "CHAPTER_08",
+      "healthPool": 240,
+      "phases": [
+        {
+          "phase": 1,
+          "hpRange": "100%–50%",
+          "mechanic": "Freezes outer columns in 2-layer Glacier Ice and rolls twin Spiked Jawbreakers down the Darjeeling trestle track."
+        },
+        {
+          "phase": 2,
+          "hpRange": "50%–0%",
+          "mechanic": "Summons Foothill Wind gusts that slide candies sideways each turn; players use Golden Jilapi Coils & Rasgulla Bounce Pads to deflect its own boulders back into its ice shield!"
+        }
+      ],
+      "weakness": "Deflected boulders + warm Jilapi/Litchi combos (immune to cryo tools!).",
+      "defeatSequence": "Its giant ice-armor cracks open to reveal a tiny friendly snow-marmot riding inside!"
+    },
+    {
+      "bossId": "BOSS_05_FESTIVAL_CLOCKWORK_JUGGERNAUT",
+      "name": "Charkha-Bot — The Grand Carnival Automaton",
+      "campaignLevel": 51,
+      "expansionLevel": 45,
+      "chapterId": "CHAPTER_09",
+      "healthPool": 260,
+      "phases": [
+        {
+          "phase": 1,
+          "hpRange": "100%–50%",
+          "mechanic": "Synchronized with 2 Piston Candy Crushers and 2 Rotating Pinwheel Gates on the board; marches strictly on move ticks while chaining unattended specials."
+        },
+        {
+          "phase": 2,
+          "hpRange": "50%–0%",
+          "mechanic": "Activates a Countdown Escape Shutter! Players must keep the shutter cranked above 40% while detonating 4 Special Combos to short-circuit its master gear."
+        }
+      ],
+      "weakness": "Double-Special combos (Striped + Wrapped / Rainbow + Striped) overload its brass dynamo.",
+      "defeatSequence": "Transforms into a dazzling carnival ferris-wheel firework fountain as Mochi rides the gondola to safety."
+    },
+    {
+      "bossId": "BOSS_06_EMPEROR_PRISM_HYDRA_SERPENT",
+      "name": "Emperor Chroma-Fang — The Three-Headed Prism Serpent",
+      "campaignLevel": 56,
+      "expansionLevel": 50,
+      "chapterId": "CHAPTER_10",
+      "healthPool": 350,
+      "phases": [
+        {
+          "phase": 1,
+          "hpRange": "100%–65%",
+          "mechanic": "Three elemental serpent heads (Ruby Ember Head, Sapphire Frost Head, Emerald Slime Head) guard the Crystal Jungle Sanctum! Each head projects its hazard (`OBS_CHILI_EMBER_FIRE`, `OBS_GLACIER_ICE_BARRIER`, `OBS_STICKY_MANGO_SLIME`) onto the board."
+        },
+        {
+          "phase": 2,
+          "hpRange": "65%–30%",
+          "mechanic": "Submerges the bottom 2 rows in Monsoon Crystal Tide (dual-gravity!) while rotating 2 `OBS_CRYSTAL_PRISM_MIRROR` nodes in the center of the board. Players bank Striped/Rainbow beams through the prisms to stun all 3 heads!"
+        },
+        {
+          "phase": 3,
+          "hpRange": "30%–0%",
+          "mechanic": "Final Desperation Chase! All 3 heads merge into a Prism Super-Serpent racing down the spiral chute while Mochi sprints for the Grand Golden Portal. Drop the Final Royal Key + charge the 100% Rainbow Prism Mega-Cannon for the ultimate rescue blast!"
+        }
+      ],
+      "weakness": "Prism-split Rainbow + Striped mega-combos hit all 3 heads simultaneously!",
+      "defeatSequence": "Shatters its dark crystal crown in a breathtaking full-screen rainbow aurora, turning back into three harmless baby gummy geckos as Mochi celebrates on the Grand Trophy Terrace!"
+    }
+  ]
+}

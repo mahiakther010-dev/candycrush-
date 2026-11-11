@@ -1,0 +1,270 @@
+{
+  "version": "1.0.0",
+  "totalObstacles": 24,
+  "obstacles": [
+    {
+      "obstacleId": "OBS_CARAMEL_LAVA",
+      "name": "Rising Caramel Lava",
+      "placementZone": "arena_and_board_bottom",
+      "hitPoints": 1,
+      "firstAppearsCampaignLevel": 2,
+      "behavior": "Bubbling golden-orange molten caramel rises steadily in the survival pit; in advanced chapters, lava geysers bubble onto bottom-row board tiles if left unchecked for 3 moves.",
+      "clearCondition": "Cooled into walkable sugar-crust by matching Coconut/Kulfi candies, activating Ice Cannons, or using Tender Coconut Extinguisher.",
+      "combinatorics": "Pairs with Collapsing Bridges and Fire Barriers to create vertical urgency.",
+      "visualConcept": "Glossy amber-crimson bubbling fluid with warm subsurface glow and floating sugar-spark embers."
+    },
+    {
+      "obstacleId": "OBS_SPIKED_BOULDER",
+      "name": "Rolling Spiked Jawbreaker",
+      "placementZone": "arena_track",
+      "hitPoints": 3,
+      "firstAppearsCampaignLevel": 5,
+      "behavior": "Massive layered candy boulder studded with sugar-crystal spikes rolling down sloped orchard/foothill tracks behind Mochi.",
+      "clearCondition": "Slowed by Rasgulla Bounce Pads, halted by raised mechanical gates, or shattered by 3 Special Candy blasts.",
+      "combinatorics": "Combines with Rotating Gates and Crumbling Platforms on downhill chase stages.",
+      "visualConcept": "Swirling magenta-and-ivory jawbreaker sphere with faceted crystalline studs."
+    },
+    {
+      "obstacleId": "OBS_GLACIER_ICE_BARRIER",
+      "name": "Himalayan Frost Ice",
+      "placementZone": "board_overlay",
+      "hitPoints": 2,
+      "firstAppearsCampaignLevel": 3,
+      "behavior": "Encases candies or exit chutes in 1-to-2 layers of translucent alpine ice, preventing tile movement until thawed.",
+      "clearCondition": "Cracked by matching the candy inside (if 1-layer translucent) or matching orthogonally adjacent candies / Striped lasers.",
+      "combinatorics": "Protects Golden Keys and Brass Trunks from premature collection.",
+      "visualConcept": "Refractive sapphire-cyan crystal block with internal frost ferns and crisp specular shatter."
+    },
+    {
+      "obstacleId": "OBS_BAMBOO_WOOD_CAGE",
+      "name": "Woven Bamboo Crate Cage",
+      "placementZone": "board_solid",
+      "hitPoints": 2,
+      "firstAppearsCampaignLevel": 7,
+      "behavior": "Sturdy criss-crossed Bengal bamboo crate occupying a board cell and blocking vertical candy/marble gravity above drain chutes.",
+      "clearCondition": "Damaged by adjacent matches, Jackfruit heavy-match shockwaves (+1 bonus damage), Hammer, or Bomb blasts.",
+      "combinatorics": "Forms diagonal waterfall funnels when staggered with Coconut Husk Bumpers.",
+      "visualConcept": "Warm honey-golden split bamboo lattice lashed with natural twine."
+    },
+    {
+      "obstacleId": "OBS_WROUGHT_METAL_CHAIN",
+      "name": "Forged Iron Padlock Chain",
+      "placementZone": "board_lock",
+      "hitPoints": 1,
+      "firstAppearsCampaignLevel": 5,
+      "behavior": "Crossed metallic links locking a candy in place so it cannot be swapped or fall, though its color can still participate in matches.",
+      "clearCondition": "Include the chained candy in a 3+ match, hit with any Special blast, or snap via Riverboat Winch tension.",
+      "combinatorics": "Locks Special Candies or Keys mid-board as high-value rewards once freed.",
+      "visualConcept": "Brushed pewter-steel links with a gleaming brass padlock medallion."
+    },
+    {
+      "obstacleId": "OBS_STICKY_MANGO_SLIME",
+      "name": "Sticky Tree-Sap Slime",
+      "placementZone": "board_coating",
+      "hitPoints": 1,
+      "firstAppearsCampaignLevel": 6,
+      "behavior": "Viscous lime-amber gummy ooze spat by serpents or oozing from slime blobs; prevents swapping and spreads 1 tile every 3 turns if none are cleared.",
+      "clearCondition": "Cleared by matching with the coated candy, Coconut Splash combos, or Monsoon Water Blaster.",
+      "combinatorics": "Synergizes dangerously with Tea Mist Clouds that hide where slime is about to spread.",
+      "visualConcept": "Translucent bouncy lime jelly dome with playful rising air bubbles."
+    },
+    {
+      "obstacleId": "OBS_CRUMBLING_BISCUIT_PLATFORM",
+      "name": "Falling Wafer Platform",
+      "placementZone": "arena_floor",
+      "hitPoints": 1,
+      "firstAppearsCampaignLevel": 8,
+      "behavior": "Crispy butter-biscuit ledges under Mochi that crack stage-by-stage every 10 seconds (or 3 moves) before dropping into the chasm.",
+      "clearCondition": "Advance Mochi to the next safe ledge via objective matches, or clamp with Golden Resin Platform Anchor.",
+      "combinatorics": "Pairs with Jute Grapple Rope and Timed Escape Doors.",
+      "visualConcept": "Layered golden tea-biscuit slab shedding harmless sugar crumbs as its stability meter ticks down."
+    },
+    {
+      "obstacleId": "OBS_SLIDING_STONE_WALL",
+      "name": "Moving Terracotta Partition",
+      "placementZone": "board_dynamic_divider",
+      "hitPoints": 99,
+      "firstAppearsCampaignLevel": 10,
+      "behavior": "Indestructible 2-tile terracotta slider bar that shifts 1 column left or right after every move, dynamically opening and closing drain chutes!",
+      "clearCondition": "Not destroyed—outsmarted by timing matches when the chute aligns, or temporarily pinned with Resin Anchor.",
+      "combinatorics": "Forces rhythmic planning on Key-drop and Marble-drain boards.",
+      "visualConcept": "Carved warm Bengal terracotta brick block inlaid with geometric floral patterns."
+    },
+    {
+      "obstacleId": "OBS_ROPE_SLAT_BRIDGE",
+      "name": "Collapsing Suspension Bridge",
+      "placementZone": "arena_path",
+      "hitPoints": 4,
+      "firstAppearsCampaignLevel": 12,
+      "behavior": "Multi-plank wooden bridge across canyon/river gaps whose slats snap one by one under enemy pursuit or monsoon gusts.",
+      "clearCondition": "Rebuilt plank-by-plank by matching Guava/Jackfruit structural candies on the board.",
+      "combinatorics": "Combines with Gale Wind Tunnels and Mangrove Root Crawlers.",
+      "visualConcept": "Curved bamboo-and-plank walkway swaying gently on braided ropes."
+    },
+    {
+      "obstacleId": "OBS_BUBBLING_MUD_BOG",
+      "name": "Sticky Sundarbans Mud Bog",
+      "placementZone": "hybrid_linked",
+      "hitPoints": 2,
+      "firstAppearsCampaignLevel": 17,
+      "behavior": "100% poison-free, comical chocolaty silt bog! Slows Mochi's movement speed by 50% in the arena and swallows falling board items unless paved over with leaf-mats.",
+      "clearCondition": "Flushed clean by Monsoon Water Blaster, Daab Coconut matches, or bridged with Mango Nectar slicks.",
+      "combinatorics": "Slows Mochi while Mangrove Root Crawlers close distance.",
+      "visualConcept": "Glossy cocoa-brown mud puddles popping playful round mud-bubbles."
+    },
+    {
+      "obstacleId": "OBS_MONSOON_FLOOD_TIDE",
+      "name": "Monsoon River Floodwater",
+      "placementZone": "hybrid_linked",
+      "hitPoints": 1,
+      "firstAppearsCampaignLevel": 37,
+      "behavior": "Submerges the bottom 2–3 rows of the puzzle board in sparkling river water! Submerged candies float UPWARD instead of falling downward when matched, inverting cascade physics!",
+      "clearCondition": "Lowered by matching pump-valve candies or cranking Sluice Floodgates.",
+      "combinatorics": "Creates mind-bending dual-gravity boards where top rows fall down and bottom rows float up!",
+      "visualConcept": "Crystal-clear aquamarine water volume with gentle surface ripples and floating lotus petals."
+    },
+    {
+      "obstacleId": "OBS_CHILI_EMBER_FIRE",
+      "name": "Spiced Sugar Fire Barrier",
+      "placementZone": "board_spreading",
+      "hitPoints": 1,
+      "firstAppearsCampaignLevel": 22,
+      "behavior": "Crackling warm cinnamon-chili flame ring around board tiles; spreads 1 adjacent tile if no fire tile is extinguished on a turn. Destroys normal candies it overtakes (never Keys).",
+      "clearCondition": "Extinguished by adjacent Jamun/Coconut matches, Freeze Blast, or Tender Coconut Extinguisher.",
+      "combinatorics": "Avoid using Gust Fan while Fire is active unless extinguished first!",
+      "visualConcept": "Stylized cartoon tangerine-and-gold flame crown dancing over sizzling sugar."
+    },
+    {
+      "obstacleId": "OBS_ROTATING_WATERWHEEL_GATE",
+      "name": "Rotating Tea-Mill Gate",
+      "placementZone": "hybrid_linked",
+      "hitPoints": 99,
+      "firstAppearsCampaignLevel": 13,
+      "behavior": "4-blade wooden paddle turnstile that rotates 90 degrees after every move, alternating between blocking horizontal matches vs blocking vertical drops—and toggling Mochi's upper tunnel gate in sync!",
+      "clearCondition": "Controlled via move cadence, Riverboat Winch, or Resin Anchor.",
+      "combinatorics": "Turns move counting into a puzzle rhythm game.",
+      "visualConcept": "Polished teakwood mill wheel with brass hub rivets."
+    },
+    {
+      "obstacleId": "OBS_PISTON_CANDY_CRUSHER",
+      "name": "Sugar-Mill Piston Crusher",
+      "placementZone": "hybrid_linked",
+      "hitPoints": 3,
+      "firstAppearsCampaignLevel": 24,
+      "behavior": "Heavy brass press that glows amber to telegraph 1 turn ahead, then slams down—compressing an arena corridor or crushing unprotected Special Candies in its target column!",
+      "clearCondition": "Jammed for 3 turns by hitting its gear-switch tile with a Striped/Wrapped blast, or absorbed by Rasgulla Orbs.",
+      "combinatorics": "Punishes hoarding Special Candies in telegraphed danger columns.",
+      "visualConcept": "Steampunk-lite brass confectioner's press with striped hazard trim."
+    },
+    {
+      "obstacleId": "OBS_RETRACTABLE_SPIKE_TRAP",
+      "name": "Alternating Bamboo Thorn Plate",
+      "placementZone": "arena_floor",
+      "hitPoints": 1,
+      "firstAppearsCampaignLevel": 18,
+      "behavior": "Floor panels along Mochi's escape corridor whose blunt cartoon thorn-pegs pop UP on odd moves and retract DOWN on even moves.",
+      "clearCondition": "Advance Mochi only on safe 'even' beats, shield her with Sugar Shield, or bounce over with Rasgulla Trampoline.",
+      "combinatorics": "Adds turn-synchronization tension to Key unlocks.",
+      "visualConcept": "Checkered sandstone floor tile with bright coral-tipped bamboo pegs."
+    },
+    {
+      "obstacleId": "OBS_BRASS_TREASURE_TRUNK",
+      "name": "Locked Brass Sweet Trunk",
+      "placementZone": "board_objective_container",
+      "hitPoints": 3,
+      "firstAppearsCampaignLevel": 21,
+      "behavior": "Ornate locked market chest sitting on the board with 3 colored gem-locks (e.g., 1 Mango, 1 Litchi, 1 Jamun); immune to generic hammers until its matching fruit colors are matched nearby!",
+      "clearCondition": "Match the displayed fruit colors anywhere in the chest's row/column to pop all 3 clasps and release Rescue Parts.",
+      "combinatorics": "Requires targeted color-hunting amidst chaotic hazards.",
+      "visualConcept": "Embossed golden-brass chest with three glowing fruit-shaped keyhole gems."
+    },
+    {
+      "obstacleId": "OBS_GALE_WIND_TUNNEL",
+      "name": "Cyclone Wind Current",
+      "placementZone": "hybrid_linked",
+      "hitPoints": 99,
+      "firstAppearsCampaignLevel": 15,
+      "behavior": "Breezy wind stream across 2 designated rows that slides all unblocked candies 1 cell sideways at the end of every turn—and pushes Mochi's sailboat/balloon in the arena!",
+      "clearCondition": "Redirected or calmed for 2 turns by Sylhet Bamboo Gust Fan or matching Wind-Vane switches.",
+      "combinatorics": "Auto-creates surprise cascade chains for clever players who anticipate the 1-cell sideways drift!",
+      "visualConcept": "Translucentmint-white swirling slipstream ribbons with fluttering leaves."
+    },
+    {
+      "obstacleId": "OBS_FERRY_MOVING_PLATFORM",
+      "name": "Country-Boat Ferry Gondola",
+      "placementZone": "arena_path",
+      "hitPoints": 1,
+      "firstAppearsCampaignLevel": 27,
+      "behavior": "Wooden river sampan carrying Mochi across wide water channels; drifts backward with the current unless propelled forward by matching Blue/Aqua candies.",
+      "clearCondition": "Reach the far pier by accumulating propulsion matches while fending off Whirlpool Eels.",
+      "combinatorics": "Turns the entire board into a tug-of-war propulsion engine.",
+      "visualConcept": "Hand-painted colourful wooden Bengal river boat with a lantern bow."
+    },
+    {
+      "obstacleId": "OBS_LOOSE_SHALE_ROCKFALL",
+      "name": "Foothill Sugar-Shale Rockfall",
+      "placementZone": "hybrid_linked",
+      "hitPoints": 1,
+      "firstAppearsCampaignLevel": 39,
+      "behavior": "Unstable cavern ceiling that drops 2 crunchy rock-candy pebbles into the top board rows (and threatens Mochi's helmet!) whenever a 3x3 Bomb detonates.",
+      "clearCondition": "Pebbles clear with 1 adjacent match; promotes precision Striped/Teleporter play over reckless bombing.",
+      "combinatorics": "Balances explosive power-up spam in Chapter 8 & 10.",
+      "visualConcept": "Faceted amber-grey rock-sugar chunks with dust puffs."
+    },
+    {
+      "obstacleId": "OBS_TIMED_BLAST_SHUTTER",
+      "name": "Counterweight Sluice Shutter",
+      "placementZone": "arena_gate",
+      "hitPoints": 4,
+      "firstAppearsCampaignLevel": 30,
+      "behavior": "Heavy exit blast door that starts 100% OPEN at level start and ratchets CLOSED by 4% every second! Matching counterweight candies cranks it back up.",
+      "clearCondition": "Keep the shutter >= 35% open at the moment Mochi reaches the exit threshold.",
+      "combinatorics": "Inverts the standard 'unlock closed gate' formula into a 'hold the door open!' thriller.",
+      "visualConcept": "Riveted bronze sluice gate suspended on twin counterweight chains."
+    },
+    {
+      "obstacleId": "OBS_TEA_MIST_CLOUD",
+      "name": "Sylhet Highland Mist Veil",
+      "placementZone": "board_vision_veil",
+      "hitPoints": 1,
+      "firstAppearsCampaignLevel": 12,
+      "behavior": "Soft pearlescent valley fog drifting over a 3x3 patch of candies, obscuring their colors (silhouettes faintly peek through!) until cleared.",
+      "clearCondition": "Cleared by any match touching the mist, Mandarin Orange zest burst, Bamboo Gust Fan, or Firefly Beacon.",
+      "combinatorics": "Tests silhouette recognition (which is why each 3D candy has a unique shape!).",
+      "visualConcept": "Volumetric soft silver-mint cloud puffs hovering just above the 3D candies."
+    },
+    {
+      "obstacleId": "OBS_COCONUT_HUSK_BUMPER",
+      "name": "Armored Coconut Husk Bumper",
+      "placementZone": "board_deflector",
+      "hitPoints": 3,
+      "firstAppearsCampaignLevel": 32,
+      "behavior": "Tough fibrous shell angled at 45 degrees: absorbs 1 HP when hit by a Striped laser AND reflects the remaining laser beam 90 degrees across the perpendicular axis!",
+      "clearCondition": "3 adjacent matches or 3 laser bank-shots crack the husk open to reveal a bonus Tender Coconut candy.",
+      "combinatorics": "Enables trick-shot laser geometry around indestructible corners!",
+      "visualConcept": "Polished half-coconut bumper with a gleaming angled pearl-shell mirror plate."
+    },
+    {
+      "obstacleId": "OBS_HONEYCOMB_WAX_SEAL",
+      "name": "Sundarbans Golden Honeycomb",
+      "placementZone": "board_network",
+      "hitPoints": 2,
+      "firstAppearsCampaignLevel": 19,
+      "behavior": "Connected cluster of 4–7 hexagonal golden wax cells; peripheral cells regenerate 1 HP unless the glowing central 'Queen Drop' cell is cracked first!",
+      "clearCondition": "Focus matches or Hammer/Striped blasts onto the glowing central Queen Wax cell to shatter the entire linked honeycomb at once!",
+      "combinatorics": "Teaches target prioritization instead of random matching.",
+      "visualConcept": "Warm translucent amber honeycomb lattice dripping golden nectar."
+    },
+    {
+      "obstacleId": "OBS_CRYSTAL_PRISM_MIRROR",
+      "name": "Refracting Quartz Prism",
+      "placementZone": "board_amplifier",
+      "hitPoints": 99,
+      "firstAppearsCampaignLevel": 47,
+      "behavior": "Permanent crystalline node on the board: whenever a Striped blast or Rainbow arc touches it, the prism splits and fires beams in BOTH row and column directions!",
+      "clearCondition": "Beneficial puzzle structure—rotates 45 degrees each turn between Orthogonal (+) and Diagonal (X) beam splitting!",
+      "combinatorics": "Core mechanic of Chapter 10 & the Final Prism Hydra Boss fight!",
+      "visualConcept": "Floating iridescent diamond-cut quartz crystal casting subtle rainbow caustics."
+    }
+  ]
+}

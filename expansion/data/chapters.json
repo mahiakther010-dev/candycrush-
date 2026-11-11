@@ -1,0 +1,188 @@
+{
+  "version": "1.0.0",
+  "nonReligiousCompliance": "STRICTLY_VERIFIED_SECULAR_NATURAL_CULINARY_CULTURAL",
+  "totalChapters": 10,
+  "levelsPerChapter": 5,
+  "chapters": [
+    {
+      "chapterId": "CHAPTER_01",
+      "chapterNumber": 1,
+      "title": "Bengal Mango Valley",
+      "campaignLevelRange": [7, 11],
+      "expansionLevelRange": [1, 5],
+      "regionalInspiration": "Sun-drenched Rajshahi (Bangladesh) and Malda (India) summer Himsagar mango orchards, red-clay garden paths, woven bamboo fruit baskets, and terracotta orchard walls.",
+      "visualTheme": {
+        "skyPalette": ["#FFD166", "#FF9F1C", "#2EC4B6"],
+        "architecture": "Terracotta brick garden arches, split-bamboo scaffolding, golden mango-leaf canopies",
+        "ambientProps": "Woven tukri mango baskets, brass orchard bells, fluttering yellow orioles, wooden ox-cart wheels"
+      },
+      "featuredCandies": ["CANDY_HIMSAGAR_MANGO", "CANDY_DINAJPUR_LITCHI", "CANDY_BARISAL_GUAVA", "CANDY_TENDER_COCONUT", "CANDY_KALOJAM_JAMUN"],
+      "introducedObstacles": ["OBS_BAMBOO_WOOD_CAGE", "OBS_CRUMBLING_BISCUIT_PLATFORM", "OBS_SLIDING_STONE_WALL"],
+      "introducedTools": ["TOOL_SUGAR_SHIELD", "TOOL_JUTE_ROPE_RESCUE", "TOOL_CHRONO_SANDGLASS"],
+      "featuredEnemies": ["ENEMY_GREEN_SERPENT", "ENEMY_GLUTTON_CHOMPER"],
+      "chapterBossId": null
+    },
+    {
+      "chapterId": "CHAPTER_02",
+      "chapterNumber": 2,
+      "title": "Sylhet Tea Garden",
+      "campaignLevelRange": [12, 16],
+      "expansionLevelRange": [6, 10],
+      "regionalInspiration": "Lush rolling emerald tea estates of Sreemangal/Sylhet (Bangladesh) and Assam (India), bamboo irrigation flumes, wooden waterwheels, and cool morning valley mist.",
+      "visualTheme": {
+        "skyPalette": ["#A8E6CF", "#38B000", "#1B4332"],
+        "architecture": "Tiered hillside stone retaining walls, timber watermills, suspended rope footbridges",
+        "ambientProps": "Plucking baskets, steaming porcelain teacups, drifting valley mist ribbons, wooden shade trees"
+      },
+      "featuredCandies": ["CANDY_DARJEELING_ORANGE", "CANDY_BARISAL_GUAVA", "CANDY_HIMSAGAR_MANGO", "CANDY_DINAJPUR_LITCHI", "CANDY_KALOJAM_JAMUN"],
+      "introducedObstacles": ["OBS_TEA_MIST_CLOUD", "OBS_ROPE_SLAT_BRIDGE", "OBS_ROTATING_WATERWHEEL_GATE", "OBS_GALE_WIND_TUNNEL"],
+      "introducedTools": ["TOOL_JILAPI_CLUSTER_BOMB", "TOOL_TEA_LEAF_GUST_FAN", "TOOL_KULFI_ICE_CANNON"],
+      "featuredEnemies": ["ENEMY_CLOCKWORK_SENTINEL", "ENEMY_GREEN_SERPENT"],
+      "chapterBossId": "BOSS_01_MANGROVE_SERPENT_MATRIARCH"
+    },
+    {
+      "chapterId": "CHAPTER_03",
+      "chapterNumber": 3,
+      "title": "Sundarbans Adventure",
+      "campaignLevelRange": [17, 21],
+      "expansionLevelRange": [11, 15],
+      "regionalInspiration": "World's largest coastal mangrove forest spanning Bangladesh and West Bengal—winding tidal creeks, aerial pneumatophore roots, wild golden honeycombs, and wooden dinghy boats.",
+      "visualTheme": {
+        "skyPalette": ["#74C69D", "#2D6A4F", "#081C15"],
+        "architecture": "Elevated timber boardwalks, mangrove root arches, watchtower stilts, brass honey-collector lanterns",
+        "ambientProps": "Spotted deer silhouettes in distant reeds, kingfishers, dripping golden honeycombs, bubbling silt pools"
+      },
+      "featuredCandies": ["CANDY_MADHUPUR_JACKFRUIT", "CANDY_HIMSAGAR_MANGO", "CANDY_TENDER_COCONUT", "CANDY_BARISAL_GUAVA", "CANDY_KALOJAM_JAMUN"],
+      "introducedObstacles": ["OBS_BUBBLING_MUD_BOG", "OBS_RETRACTABLE_SPIKE_TRAP", "OBS_HONEYCOMB_WAX_SEAL", "OBS_BRASS_TREASURE_TRUNK"],
+      "introducedTools": ["TOOL_BAMBOO_MAGNET"],
+      "featuredEnemies": ["ENEMY_SYRUP_OOZE_BLOB", "ENEMY_MANGROVE_ROOT_CRAWLER"],
+      "chapterBossId": null
+    },
+    {
+      "chapterId": "CHAPTER_04",
+      "chapterNumber": 4,
+      "title": "Litchi Orchard Escape",
+      "campaignLevelRange": [22, 26],
+      "expansionLevelRange": [16, 20],
+      "regionalInspiration": "Vibrant crimson summer litchi groves of Dinajpur (Bangladesh) and Muzaffarpur (India), high treehouse platforms, pulley zip-lines, and sunlit orchard canopies.",
+      "visualTheme": {
+        "skyPalette": ["#FF758F", "#FF4D6D", "#590D22"],
+        "architecture": "Treehouse timber decks, pulley zip-tracks, woven reed windbreaks, brass orchard scales",
+        "ambientProps": "Bunches of ruby litchis hanging overhead, kite tails in branches, wooden sorting crates"
+      },
+      "featuredCandies": ["CANDY_DINAJPUR_LITCHI", "CANDY_DARJEELING_ORANGE", "CANDY_MADHUPUR_JACKFRUIT", "CANDY_TENDER_COCONUT", "CANDY_PISTACHIO_KULFI"],
+      "introducedObstacles": ["OBS_CHILI_EMBER_FIRE", "OBS_PISTON_CANDY_CRUSHER"],
+      "introducedTools": ["TOOL_FOAM_EXTINGUISHER", "TOOL_MONSOON_WATER_BLASTER"],
+      "featuredEnemies": ["ENEMY_MOLTEN_CRAWLER", "ENEMY_MYNAH_GLIDER_THIEF"],
+      "chapterBossId": "BOSS_02_ROYAL_MANGROVE_CRAB_MECH"
+    },
+    {
+      "chapterId": "CHAPTER_05",
+      "chapterNumber": 5,
+      "title": "Riverside Candy Market",
+      "campaignLevelRange": [27, 31],
+      "expansionLevelRange": [21, 25],
+      "regionalInspiration": "Lively secular riverfront sweet & fruit bazaars along the Padma, Buriganga, and Hooghly rivers—striped canvas awnings, sizzling jilapi skillets, brass sweet-trays, and wooden ferries.",
+      "visualTheme": {
+        "skyPalette": ["#FFB703", "#FB8500", "#1D3557"],
+        "architecture": "Pier boardwalks, colourful striped bazaar stalls, brass scales, wrought-iron archway lanterns",
+        "ambientProps": "Stacks of clay rasgulla pots (handi), sizzling jilapi coils, painted rickshaw-art geometric borders"
+      },
+      "featuredCandies": ["CANDY_CRISPY_JILAPI", "CANDY_SPONGY_RASGULLA", "CANDY_HIMSAGAR_MANGO", "CANDY_KALOJAM_JAMUN", "CANDY_DINAJPUR_LITCHI"],
+      "introducedObstacles": ["OBS_FERRY_MOVING_PLATFORM", "OBS_TIMED_BLAST_SHUTTER"],
+      "introducedTools": ["TOOL_PRISM_TELEPORTER", "TOOL_JACKFRUIT_RESIN_ANCHOR"],
+      "featuredEnemies": ["ENEMY_JAWBREAKER_PANGOLIN", "ENEMY_GLUTTON_CHOMPER", "ENEMY_MYNAH_GLIDER_THIEF"],
+      "chapterBossId": null
+    },
+    {
+      "chapterId": "CHAPTER_06",
+      "chapterNumber": 6,
+      "title": "Tropical Island Survival",
+      "campaignLevelRange": [32, 36],
+      "expansionLevelRange": [26, 30],
+      "regionalInspiration": "Turquoise coral lagoons and coconut palms of St. Martin's Island (Bangladesh) and the Andaman/Lakshadweep islands (India).",
+      "visualTheme": {
+        "skyPalette": ["#90E0EF", "#00B4D8", "#03045E"],
+        "architecture": "Coral-stone tide walls, driftwood bridges, bamboo beach cabanas, shell-mirror bumpers",
+        "ambientProps": "Swaying coconut palms, starfish on white sand, turquoise tide pools, striped beach umbrellas"
+      },
+      "featuredCandies": ["CANDY_TENDER_COCONUT", "CANDY_HIMSAGAR_MANGO", "CANDY_DARJEELING_ORANGE", "CANDY_BARISAL_GUAVA", "CANDY_DINAJPUR_LITCHI", "CANDY_KALOJAM_JAMUN"],
+      "introducedObstacles": ["OBS_COCONUT_HUSK_BUMPER"],
+      "introducedTools": ["TOOL_RASGULLA_BOUNCE_PAD"],
+      "featuredEnemies": ["ENEMY_GREEN_SERPENT", "ENEMY_SYRUP_OOZE_BLOB"],
+      "chapterBossId": "BOSS_03_RAJA_GOLLA_DEVOURER"
+    },
+    {
+      "chapterId": "CHAPTER_07",
+      "chapterNumber": 7,
+      "title": "Monsoon River Rescue",
+      "campaignLevelRange": [37, 41],
+      "expansionLevelRange": [31, 35],
+      "regionalInspiration": "Dramatic Meghna & Brahmaputra monsoon river crossings—silver rain curtains, paper boats, brass sluice floodgates, and surging turquoise currents.",
+      "visualTheme": {
+        "skyPalette": ["#48CAE4", "#0077B6", "#023E8A"],
+        "architecture": "Brick river embankments, bronze sluice gates, covered country sampans, floating bamboo docks",
+        "ambientProps": "Origami paper boats, blooming pink water-lilies (shapla), rain ripples, glowing mason-jar fireflies"
+      },
+      "featuredCandies": ["CANDY_BARISAL_GUAVA", "CANDY_KALOJAM_JAMUN", "CANDY_TENDER_COCONUT", "CANDY_MADHUPUR_JACKFRUIT", "CANDY_SPONGY_RASGULLA"],
+      "introducedObstacles": ["OBS_MONSOON_FLOOD_TIDE"],
+      "introducedTools": ["TOOL_LANTERN_FLARE_BEACON", "TOOL_GRAPPLING_PULLEY_WINCH"],
+      "featuredEnemies": ["ENEMY_MONSOON_WHIRLPOOL_EEL", "ENEMY_MANGROVE_ROOT_CRAWLER"],
+      "chapterBossId": null
+    },
+    {
+      "chapterId": "CHAPTER_08",
+      "chapterNumber": 8,
+      "title": "Himalayan Foothill Expedition",
+      "campaignLevelRange": [42, 46],
+      "expansionLevelRange": [36, 40],
+      "regionalInspiration": "Crisp alpine pine valleys, Darjeeling/Dooars mountain toy-train stone viaducts, sunlit snow ledges, and mandarin foothill terraces.",
+      "visualTheme": {
+        "skyPalette": ["#CAF0F8", "#3A86FF", "#1D1E4E"],
+        "architecture": "Arched mountain stone viaducts, timber cable-car stations, frosted pine trestles",
+        "ambientProps": "Miniature blue steam-train tracks, pinecones, icicle chimes, steaming kulfi & chai thermoses"
+      },
+      "featuredCandies": ["CANDY_PISTACHIO_KULFI", "CANDY_DARJEELING_ORANGE", "CANDY_CRISPY_JILAPI", "CANDY_DINAJPUR_LITCHI", "CANDY_KALOJAM_JAMUN", "CANDY_HIMSAGAR_MANGO"],
+      "introducedObstacles": ["OBS_LOOSE_SHALE_ROCKFALL"],
+      "introducedTools": ["TOOL_SYRUP_CONDUIT_BRUSH"],
+      "featuredEnemies": ["ENEMY_FROST_YETI_GOLEM", "ENEMY_MIRAGE_CHAMELEON", "ENEMY_JAWBREAKER_PANGOLIN"],
+      "chapterBossId": "BOSS_04_HIMALAYAN_AVALANCHE_TITAN"
+    },
+    {
+      "chapterId": "CHAPTER_09",
+      "chapterNumber": 9,
+      "title": "Colorful Fruit Festival",
+      "campaignLevelRange": [47, 51],
+      "expansionLevelRange": [41, 45],
+      "regionalInspiration": "Secular rural harvest & orchard craft fair (Mela)—handcrafted paper pinwheels, colourful kites, wooden ferris wheels, folk geometric alpona floor borders, and overflowing fruit pavilions.",
+      "visualTheme": {
+        "skyPalette": ["#FFBE0B", "#FF006E", "#3A0CA3"],
+        "architecture": "Painted bamboo festival pavilions, spinning wooden fairground wheels, ribbon-draped bridges",
+        "ambientProps": "Diamond paper kites (ghuri), spinning colour pinwheels, clay sweet platters, confetti streamers"
+      },
+      "featuredCandies": ["CANDY_HIMSAGAR_MANGO", "CANDY_DINAJPUR_LITCHI", "CANDY_CRISPY_JILAPI", "CANDY_SPONGY_RASGULLA", "CANDY_BARISAL_GUAVA", "CANDY_KALOJAM_JAMUN"],
+      "introducedObstacles": ["OBS_CRYSTAL_PRISM_MIRROR"],
+      "introducedTools": [],
+      "featuredEnemies": ["ENEMY_CLOCKWORK_SENTINEL", "ENEMY_GLUTTON_CHOMPER", "ENEMY_MYNAH_GLIDER_THIEF"],
+      "chapterBossId": "BOSS_05_FESTIVAL_CLOCKWORK_JUGGERNAUT"
+    },
+    {
+      "chapterId": "CHAPTER_10",
+      "chapterNumber": 10,
+      "title": "Crystal Jungle Adventure",
+      "campaignLevelRange": [52, 56],
+      "expansionLevelRange": [46, 50],
+      "regionalInspiration": "Luminous subterranean quartz-and-waterfall caverns beneath the lush Bandarban/Meghalaya green hills—natural living-root bridges, glowing mineral geodes, and emerald underground rivers.",
+      "visualTheme": {
+        "skyPalette": ["#7209B7", "#4CC9F0", "#10002B"],
+        "architecture": "Living-root suspension spans, giant natural amethyst/quartz geodes, cascading subterranean waterfalls",
+        "ambientProps": "Refracting rainbow light shafts, bioluminescent ferns, crystal chimes, golden rescue sanctuary"
+      },
+      "featuredCandies": ["CANDY_HIMSAGAR_MANGO", "CANDY_DINAJPUR_LITCHI", "CANDY_TENDER_COCONUT", "CANDY_KALOJAM_JAMUN", "CANDY_PISTACHIO_KULFI", "CANDY_CRISPY_JILAPI"],
+      "introducedObstacles": [],
+      "introducedTools": [],
+      "featuredEnemies": ["ENEMY_QUARTZ_WARDEN", "ENEMY_MIRAGE_CHAMELEON", "ENEMY_GREEN_SERPENT"],
+      "chapterBossId": "BOSS_06_EMPEROR_PRISM_HYDRA_SERPENT"
+    }
+  ]
+}
