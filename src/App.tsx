@@ -6,7 +6,7 @@ import { MissionMapScreen } from './components/MissionMapScreen';
 import { RescueGameStage } from './components/RescueGameStage';
 import { soundEngine } from './audio/soundEngine';
 
-const STORAGE_KEY = 'candy_rescue_save_v1';
+const STORAGE_KEY = 'candy_rescue_save_v2_56lvls';
 
 const DEFAULT_SAVE: PlayerSaveData = {
   unlockedLevel: 1,
@@ -14,7 +14,10 @@ const DEFAULT_SAVE: PlayerSaveData = {
   bestScoreByLevel: {},
   boosters: {
     hammer: 3,
+    bomb: 3,
+    shield: 3,
     freeze: 3,
+    magnet: 3,
     shuffle: 3,
   },
   language: 'bn',
@@ -23,7 +26,7 @@ const DEFAULT_SAVE: PlayerSaveData = {
 
 function loadSaveData(): PlayerSaveData {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(STORAGE_KEY) ?? localStorage.getItem('candy_rescue_save_v1');
     if (!raw) return DEFAULT_SAVE;
     const parsed = JSON.parse(raw) as Partial<PlayerSaveData>;
     return {
@@ -66,12 +69,12 @@ export const App: React.FC = () => {
 
   const consumeBooster = useCallback(
     (kind: BoosterKind): boolean => {
-      if (saveData.boosters[kind] <= 0) return false;
+      if ((saveData.boosters[kind] ?? 0) <= 0) return false;
       setSaveData((prev) => ({
         ...prev,
         boosters: {
           ...prev.boosters,
-          [kind]: Math.max(0, prev.boosters[kind] - 1),
+          [kind]: Math.max(0, (prev.boosters[kind] ?? 0) - 1),
         },
       }));
       return true;
@@ -84,6 +87,8 @@ export const App: React.FC = () => {
       const prevStars = prev.starsByLevel[levelId] ?? 0;
       const prevBest = prev.bestScoreByLevel[levelId] ?? 0;
       const nextUnlocked = Math.min(LEVELS.length, Math.max(prev.unlockedLevel, levelId + 1));
+      const lvlObj = LEVELS.find((l) => l.id === levelId);
+      const isBoss = Boolean(lvlObj?.isBoss);
 
       return {
         ...prev,
@@ -99,6 +104,8 @@ export const App: React.FC = () => {
         boosters: {
           ...prev.boosters,
           hammer: stars === 3 ? prev.boosters.hammer + 1 : prev.boosters.hammer,
+          bomb: isBoss ? prev.boosters.bomb + 1 : prev.boosters.bomb,
+          shield: isBoss ? prev.boosters.shield + 1 : prev.boosters.shield,
         },
       };
     });
@@ -115,6 +122,7 @@ export const App: React.FC = () => {
           soundEnabled={saveData.soundEnabled}
           highestLevel={saveData.unlockedLevel}
           totalStars={totalStars}
+          totalLevels={LEVELS.length}
           onPlayCurrent={() => {
             setActiveLevelId(saveData.unlockedLevel);
             setScreen('game');

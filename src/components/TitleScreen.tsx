@@ -19,6 +19,7 @@ interface TitleScreenProps {
   soundEnabled: boolean;
   highestLevel: number;
   totalStars: number;
+  totalLevels: number;
   onPlayCurrent: () => void;
   onOpenMap: () => void;
   onToggleLang: () => void;
@@ -30,6 +31,7 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
   soundEnabled,
   highestLevel,
   totalStars,
+  totalLevels,
   onPlayCurrent,
   onOpenMap,
   onToggleLang,
@@ -177,7 +179,7 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
         <div className="royal-hud-bar flex items-center gap-2 px-3.5 py-1.5 rounded-full">
           <Star3DIcon size={22} active />
           <span className="text-sm font-extrabold text-amber-200 candy-text-shadow">
-            {totalStars} / 18
+            {totalStars} / {totalLevels * 3}
           </span>
         </div>
 
@@ -266,7 +268,9 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
           >
             <MapIcon className="w-5 h-5" />
             <span>
-              {lang === 'bn' ? 'ফ্যান্টাসি মিশন ম্যাপ (৬টি মিশন)' : 'Fantasy Mission Map (6 Missions)'}
+              {lang === 'bn'
+                ? `বিশ্ব সাগা ম্যাপ (${totalLevels}টি মিশন • ১০ চ্যাপ্টার)`
+                : `Saga World Map (${totalLevels} Missions • 10 Chapters)`}
             </span>
           </button>
         </div>

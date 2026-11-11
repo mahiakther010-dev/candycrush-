@@ -12,6 +12,7 @@ import {
 } from '../types/game';
 import {
   applyGravityAndRefill,
+  applyWindConveyor,
   buildInitialBoard,
   canSwapCells,
   collectBottomKeys,
@@ -21,6 +22,7 @@ import {
   hasAnyValidMove,
   HintMove,
   isProductiveSwap,
+  pullKeysWithMagnet,
   resolveCellsToClear,
   shuffleNormalCandies,
   StepBlastResult,
@@ -29,9 +31,12 @@ import { RescueWorld3D } from '../three/rescueWorld3D';
 import { soundEngine } from '../audio/soundEngine';
 import { IntroCutscene } from './IntroCutscene';
 import {
+  Bomb3DIcon,
   Frost3DIcon,
   Hammer3DIcon,
+  Magnet3DIcon,
   SerpentDanger3DIcon,
+  Shield3DIcon,
   Shuffle3DIcon,
   Star3DIcon,
   Task3DIcon,
@@ -91,9 +96,10 @@ export const RescueGameStage: React.FC<RescueGameStageProps> = ({
   );
   const [danger, setDanger] = useState<number>(4);
   const [isFrozenUI, setIsFrozenUI] = useState<boolean>(false);
+  const [shieldActiveUI, setShieldActiveUI] = useState<boolean>(false);
   const [movesUsed, setMovesUsed] = useState<number>(0);
   const [score, setScore] = useState<number>(0);
-  const [activeHammer, setActiveHammer] = useState<boolean>(false);
+  const [targetTool, setTargetTool] = useState<'hammer' | 'bomb' | null>(null);
   const [earnedStars, setEarnedStars] = useState<number>(3);
   const [banner, setBanner] = useState<FloatingBanner | null>(null);
   const [worldEpoch, setWorldEpoch] = useState<number>(0);
@@ -104,6 +110,8 @@ export const RescueGameStage: React.FC<RescueGameStageProps> = ({
   const dangerRef = useRef<number>(4);
   const statusRef = useRef<GameStatus>(level.hasIntroCutscene ? 'intro' : 'playing');
   const scoreRef = useRef<number>(0);
+  const movesUsedRef = useRef<number>(0);
+  const shieldActiveRef = useRef<boolean>(false);
 
   const busyRef = useRef<boolean>(false);
   const selectedCellRef = useRef<{ row: number; col: number } | null>(null);
@@ -147,13 +155,16 @@ export const RescueGameStage: React.FC<RescueGameStageProps> = ({
       dangerRef.current = 4;
       setDanger(4);
       setIsFrozenUI(false);
+      shieldActiveRef.current = false;
+      setShieldActiveUI(false);
+      movesUsedRef.current = 0;
       setMovesUsed(0);
       scoreRef.current = 0;
       setScore(0);
 
       statusRef.current = initialStatus;
       setStatus(initialStatus);
-      setActiveHammer(false);
+      setTargetTool(null);
 
       busyRef.current = false;
       selectedCellRef.current = null;
@@ -186,7 +197,6 @@ export const RescueGameStage: React.FC<RescueGameStageProps> = ({
       happyTimerRef.current = 4.0;
       soundEngine.playWin();
 
-      // Celebratory 3D candy confetti bursts across board!
       const colors: CandyColor[] = ['red', 'yellow', 'green', 'blue', 'purple', 'orange'];
       for (let i = 0; i < 14; i++) {
         worldRef.current?.spawnCandyExplosion(
@@ -210,7 +220,6 @@ export const RescueGameStage: React.FC<RescueGameStageProps> = ({
     (blast: StepBlastResult, comboIndex: number) => {
       const world = worldRef.current;
 
-      // 3D Candy Shatter Fragments & Special 3D Shockwaves
       for (const pop of blast.poppedPositions) {
         world?.spawnCandyExplosion(pop.row, pop.col, pop.color, 7);
       }
@@ -222,7 +231,6 @@ export const RescueGameStage: React.FC<RescueGameStageProps> = ({
         );
       }
 
-      // Mochi reacts happily to matches!
       if (blast.totalCandiesCleared > 0) {
         happyTimerRef.current = 1.25;
       }
@@ -232,6 +240,7 @@ export const RescueGameStage: React.FC<RescueGameStageProps> = ({
         blast.cratesBroken * 120 +
         blast.iceBroken * 100 +
         blast.chainsBroken * 110 +
+        blast.slimesCleared * 110 +
         blast.specialsTriggered * 200;
       scoreRef.current += gained;
       setScore(scoreRef.current);
@@ -247,7 +256,6 @@ export const RescueGameStage: React.FC<RescueGameStageProps> = ({
         );
       }
 
-      // Release 3D marbles in silo!
       let marbleGoalRemaining = 0;
       for (const tk of tasksRef.current) {
         if (tk.kind === 'marbles') {
@@ -271,7 +279,6 @@ export const RescueGameStage: React.FC<RescueGameStageProps> = ({
         if (marblesReleasedNow > 0) soundEngine.playMarbleDrop();
       }
 
-      //Frost Turret reaction (Mission 4)
       if (level.scene === 'frost_dual' && blast.clearedColors.blue > 0) {
         const pushback = blast.clearedColors.blue * 2.4;
         dangerRef.current = Math.max(2, dangerRef.current - pushback);
@@ -292,7 +299,6 @@ export const RescueGameStage: React.FC<RescueGameStageProps> = ({
         );
       }
 
-      // Caramel Bridge reaction (Mission 2)
       if (
         level.scene === 'lava_bridge' &&
         blast.clearedColors.orange + blast.clearedColors.yellow > 0
@@ -310,10 +316,13 @@ export const RescueGameStage: React.FC<RescueGameStageProps> = ({
         else if (t.kind === 'crates') add = blast.cratesBroken;
         else if (t.kind === 'ice') add = blast.iceBroken;
         else if (t.kind === 'chains') add = blast.chainsBroken;
+        else if (t.kind === 'slime') add = blast.slimesCleared;
         else if (t.kind === 'specials') add = blast.specialsTriggered;
         else if (t.kind === 'cannon_charge') add = blast.totalCandiesCleared;
         else if (t.kind === 'bridge_candies') {
           add = blast.clearedColors.orange + blast.clearedColors.yellow;
+        } else if (t.kind === 'color_target' && t.targetColor) {
+          add = blast.clearedColors[t.targetColor] ?? 0;
         }
         return {
           ...t,
@@ -334,8 +343,12 @@ export const RescueGameStage: React.FC<RescueGameStageProps> = ({
     async (focusCells: Array<{ row: number; col: number }> = [], initialCombo = 0) => {
       let combo = initialCombo;
 
-      while (statusRef.current === 'playing') {
-        const droppedKeys = collectBottomKeys(gridRef.current, level.colors);
+      const drainKeysStep = async () => {
+        const droppedKeys = collectBottomKeys(
+          gridRef.current,
+          level.colors,
+          level.submergedFromRow
+        );
         if (droppedKeys.length > 0) {
           soundEngine.playKeyUnlock();
           happyTimerRef.current = 1.6;
@@ -360,8 +373,12 @@ export const RescueGameStage: React.FC<RescueGameStageProps> = ({
           );
           setTasks([...tasksRef.current]);
           checkWinCondition();
-          await sleep(170);
+          await sleep(165);
         }
+      };
+
+      while (statusRef.current === 'playing') {
+        await drainKeysStep();
 
         const groups = findMatches(gridRef.current, combo === initialCombo ? focusCells : []);
         if (groups.length === 0) break;
@@ -390,22 +407,39 @@ export const RescueGameStage: React.FC<RescueGameStageProps> = ({
         applyBlastProgress(blast, combo);
         combo++;
 
-        await sleep(165);
-        applyGravityAndRefill(gridRef.current, level.colors);
-        await sleep(185);
+        await sleep(160);
+        applyGravityAndRefill(gridRef.current, level.colors, level.submergedFromRow);
+        await sleep(175);
       }
 
-      const finalKeys = collectBottomKeys(gridRef.current, level.colors);
-      if (finalKeys.length > 0) {
-        soundEngine.playKeyUnlock();
-        tasksRef.current = tasksRef.current.map((t) =>
-          t.kind === 'keys'
-            ? { ...t, current: Math.min(t.target, t.current + finalKeys.length) }
-            : t
-        );
-        setTasks([...tasksRef.current]);
-        checkWinCondition();
+      // Wind Tunnel Conveyor Row Shift!
+      if (statusRef.current === 'playing' && level.windRows && level.windRows.length > 0) {
+        if (applyWindConveyor(gridRef.current, level.windRows)) {
+          await sleep(140);
+          const windMatches = findMatches(gridRef.current, []);
+          if (windMatches.length > 0) {
+            showFloatingBanner(
+              lang === 'bn' ? 'বাতাসের কম্বো!' : 'WIND DRIFT COMBO!',
+              'from-teal-200 to-emerald-400'
+            );
+            const seedMap = new Map<string, { row: number; col: number }>();
+            for (const g of windMatches) {
+              for (const c of g.cells) seedMap.set(`${c.row},${c.col}`, c);
+            }
+            const blast = resolveCellsToClear(
+              gridRef.current,
+              Array.from(seedMap.values()),
+              [],
+              true
+            );
+            applyBlastProgress(blast, combo);
+            await sleep(150);
+            applyGravityAndRefill(gridRef.current, level.colors, level.submergedFromRow);
+          }
+        }
       }
+
+      await drainKeysStep();
 
       if (statusRef.current === 'playing' && !hasAnyValidMove(gridRef.current)) {
         shuffleNormalCandies(gridRef.current, level.colors);
@@ -419,6 +453,44 @@ export const RescueGameStage: React.FC<RescueGameStageProps> = ({
     },
     [applyBlastProgress, checkWinCondition, lang, level, showFloatingBanner]
   );
+
+  const advanceMovePressureIfNeeded = useCallback(() => {
+    const nextMoves = movesUsedRef.current + 1;
+    movesUsedRef.current = nextMoves;
+    setMovesUsed(nextMoves);
+
+    if (level.moveLimit && (level.pressureMode === 'move_limited' || level.pressureMode === 'hybrid')) {
+      if (level.pressureMode === 'move_limited') {
+        dangerRef.current = Math.min(100, Math.round((nextMoves / level.moveLimit) * 100));
+        setDanger(dangerRef.current);
+      }
+      if (nextMoves >= level.moveLimit && statusRef.current === 'playing') {
+        // Check if win happened first; if still playing, check Shield!
+        const won = tasksRef.current.every((t) => t.current >= t.target);
+        if (!won) {
+          if (shieldActiveRef.current) {
+            shieldActiveRef.current = false;
+            setShieldActiveUI(false);
+            movesUsedRef.current = Math.max(0, level.moveLimit - 5);
+            setMovesUsed(movesUsedRef.current);
+            dangerRef.current = Math.max(15, dangerRef.current - 25);
+            setDanger(dangerRef.current);
+            soundEngine.playFreeze();
+            showFloatingBanner(
+              lang === 'bn' ? 'শিল্ড রক্ষা করেছে! +৫ চাল!' : 'SHIELD SAVED MOCHI! +5 MOVES!',
+              'from-cyan-200 to-amber-300'
+            );
+          } else {
+            statusRef.current = 'lost';
+            setDanger(100);
+            setStatus('lost');
+            shakeTimerRef.current = 0.5;
+            soundEngine.playFail();
+          }
+        }
+      }
+    }
+  }, [lang, level.moveLimit, level.pressureMode, showFloatingBanner]);
 
   const attemptSwap = useCallback(
     async (r1: number, c1: number, r2: number, c2: number) => {
@@ -462,8 +534,6 @@ export const RescueGameStage: React.FC<RescueGameStageProps> = ({
         return;
       }
 
-      setMovesUsed((m) => m + 1);
-
       // Rainbow + Any Candy OR Rainbow + Rainbow
       if (
         (pA.special === 'rainbow' && pB.special !== 'key') ||
@@ -484,10 +554,11 @@ export const RescueGameStage: React.FC<RescueGameStageProps> = ({
 
         const blast = resolveCellsToClear(gridRef.current, seeds, [], true);
         applyBlastProgress(blast, 1);
-        await sleep(190);
-        applyGravityAndRefill(gridRef.current, level.colors);
-        await sleep(190);
+        await sleep(185);
+        applyGravityAndRefill(gridRef.current, level.colors, level.submergedFromRow);
+        await sleep(185);
         await runCascadeLoop([], 1);
+        advanceMovePressureIfNeeded();
         busyRef.current = false;
         return;
       }
@@ -509,10 +580,11 @@ export const RescueGameStage: React.FC<RescueGameStageProps> = ({
           true
         );
         applyBlastProgress(blast, 1);
-        await sleep(190);
-        applyGravityAndRefill(gridRef.current, level.colors);
-        await sleep(190);
+        await sleep(185);
+        applyGravityAndRefill(gridRef.current, level.colors, level.submergedFromRow);
+        await sleep(185);
         await runCascadeLoop([], 1);
+        advanceMovePressureIfNeeded();
         busyRef.current = false;
         return;
       }
@@ -524,40 +596,84 @@ export const RescueGameStage: React.FC<RescueGameStageProps> = ({
         ],
         0
       );
+      advanceMovePressureIfNeeded();
       busyRef.current = false;
     },
-    [applyBlastProgress, level.cols, level.colors, level.rows, runCascadeLoop]
+    [
+      advanceMovePressureIfNeeded,
+      applyBlastProgress,
+      level.cols,
+      level.colors,
+      level.rows,
+      level.submergedFromRow,
+      runCascadeLoop,
+    ]
   );
 
-  const handleHammerSmash = useCallback(
-    async (row: number, col: number) => {
+  const handleTargetedBoardTool = useCallback(
+    async (kind: 'hammer' | 'bomb', row: number, col: number) => {
       if (busyRef.current || statusRef.current !== 'playing') return;
       const cell = gridRef.current[row]?.[col];
       if (!cell) return;
-      if (cell.blocker === 'none' && (!cell.candy || cell.candy.special === 'key')) return;
-
-      if (!onConsumeBooster('hammer')) {
-        setActiveHammer(false);
+      if (
+        kind === 'hammer' &&
+        cell.blocker === 'none' &&
+        (!cell.candy || cell.candy.special === 'key')
+      ) {
         return;
       }
 
-      setActiveHammer(false);
+      if (!onConsumeBooster(kind)) {
+        setTargetTool(null);
+        return;
+      }
+
+      setTargetTool(null);
       busyRef.current = true;
       idleSecondsRef.current = 0;
 
       soundEngine.playSpecialBlast('bomb');
       worldRef.current?.spawnBeamEffect('bomb', row, col);
-      showFloatingBanner('CANDY SMASH!', 'from-rose-300 to-amber-300');
 
-      const blast = resolveCellsToClear(gridRef.current, [{ row, col }], [], false);
+      const seeds: Array<{ row: number; col: number }> = [];
+      if (kind === 'hammer') {
+        seeds.push({ row, col });
+        showFloatingBanner('CANDY SMASH!', 'from-rose-300 to-amber-300');
+      } else {
+        for (let dr = -1; dr <= 1; dr++) {
+          for (let dc = -1; dc <= 1; dc++) {
+            const nr = row + dr;
+            const nc = col + dc;
+            if (nr >= 0 && nr < level.rows && nc >= 0 && nc < level.cols) {
+              seeds.push({ row: nr, col: nc });
+            }
+          }
+        }
+        showFloatingBanner(
+          lang === 'bn' ? '৩x৩ জিলাপি বোমা!' : '3x3 JILAPI SPARK BOMB!',
+          'from-amber-200 to-orange-500'
+        );
+      }
+
+      const blast = resolveCellsToClear(gridRef.current, seeds, [], false);
       applyBlastProgress(blast, 0);
       await sleep(160);
-      applyGravityAndRefill(gridRef.current, level.colors);
+      applyGravityAndRefill(gridRef.current, level.colors, level.submergedFromRow);
       await sleep(180);
       await runCascadeLoop([], 0);
       busyRef.current = false;
     },
-    [applyBlastProgress, level.colors, onConsumeBooster, runCascadeLoop, showFloatingBanner]
+    [
+      applyBlastProgress,
+      lang,
+      level.cols,
+      level.colors,
+      level.rows,
+      level.submergedFromRow,
+      onConsumeBooster,
+      runCascadeLoop,
+      showFloatingBanner,
+    ]
   );
 
   const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
@@ -575,8 +691,8 @@ export const RescueGameStage: React.FC<RescueGameStageProps> = ({
 
     idleSecondsRef.current = 0;
 
-    if (activeHammer) {
-      handleHammerSmash(hit.row, hit.col);
+    if (targetTool) {
+      handleTargetedBoardTool(targetTool, hit.row, hit.col);
       return;
     }
 
@@ -621,6 +737,19 @@ export const RescueGameStage: React.FC<RescueGameStageProps> = ({
     dragStartRef.current = null;
   };
 
+  const triggerShieldBooster = () => {
+    soundEngine.unlock();
+    if (statusRef.current !== 'playing' || shieldActiveRef.current) return;
+    if (!onConsumeBooster('shield')) return;
+    shieldActiveRef.current = true;
+    setShieldActiveUI(true);
+    soundEngine.playFreeze();
+    showFloatingBanner(
+      lang === 'bn' ? 'সুগার শিল্ড চালু!' : 'SUGAR SHIELD ACTIVE!',
+      'from-cyan-200 to-emerald-300'
+    );
+  };
+
   const triggerFreezeBooster = () => {
     soundEngine.unlock();
     if (statusRef.current !== 'playing') return;
@@ -628,13 +757,51 @@ export const RescueGameStage: React.FC<RescueGameStageProps> = ({
 
     freezeTimerRef.current = 6.0;
     setIsFrozenUI(true);
-    dangerRef.current = Math.max(2, dangerRef.current - 8);
+    dangerRef.current = Math.max(2, dangerRef.current - 12);
     setDanger(dangerRef.current);
     soundEngine.playFreeze();
     showFloatingBanner(
       lang === 'bn' ? '৬ সেকেন্ড ফ্রিজ!' : '6s DEEP FREEZE!',
       'from-cyan-200 to-sky-400'
     );
+  };
+
+  const triggerMagnetBooster = async () => {
+    soundEngine.unlock();
+    if (statusRef.current !== 'playing' || busyRef.current) return;
+    if (!onConsumeBooster('magnet')) return;
+
+    busyRef.current = true;
+    const pulled = pullKeysWithMagnet(gridRef.current, level.submergedFromRow);
+    soundEngine.playKeyUnlock();
+
+    if (pulled > 0) {
+      showFloatingBanner(
+        lang === 'bn' ? 'ম্যাগনেট চাবি টেনেছে!' : 'MAGNET PULLED KEYS!',
+        'from-amber-200 to-rose-400'
+      );
+      await sleep(160);
+      await runCascadeLoop([], 0);
+    } else {
+      // Bonus harvest on non-key stages!
+      const released = worldRef.current ? worldRef.current.releaseMarbles(10) : 10;
+      tasksRef.current = tasksRef.current.map((t) => {
+        if (t.kind === 'marbles') {
+          return { ...t, current: Math.min(t.target, t.current + released) };
+        }
+        if (t.kind === 'color_target' || t.kind === 'bridge_candies' || t.kind === 'cannon_charge') {
+          return { ...t, current: Math.min(t.target, t.current + 6) };
+        }
+        return t;
+      });
+      setTasks([...tasksRef.current]);
+      showFloatingBanner(
+        lang === 'bn' ? 'ম্যাগনেট হারভেস্ট!' : 'MAGNET HARVEST BOOST!',
+        'from-amber-200 to-yellow-400'
+      );
+      checkWinCondition();
+    }
+    busyRef.current = false;
   };
 
   const triggerShuffleBooster = () => {
@@ -704,7 +871,7 @@ export const RescueGameStage: React.FC<RescueGameStageProps> = ({
         if (freezeTimerRef.current > 0) {
           freezeTimerRef.current = Math.max(0, freezeTimerRef.current - dt);
           if (freezeTimerRef.current <= 0) setIsFrozenUI(false);
-        } else {
+        } else if (level.dangerSpeed > 0) {
           dangerRef.current = Math.min(100, dangerRef.current + level.dangerSpeed * dt);
           uiAccum += dt;
           if (uiAccum >= 0.12) {
@@ -721,15 +888,25 @@ export const RescueGameStage: React.FC<RescueGameStageProps> = ({
           }
 
           if (dangerRef.current >= 100) {
-            statusRef.current = 'lost';
-            setDanger(100);
-            setStatus('lost');
-            shakeTimerRef.current = 0.5;
-            soundEngine.playFail();
+            if (shieldActiveRef.current) {
+              shieldActiveRef.current = false;
+              setShieldActiveUI(false);
+              dangerRef.current = 68;
+              setDanger(68);
+              freezeTimerRef.current = 3.5;
+              setIsFrozenUI(true);
+              soundEngine.playFreeze();
+            } else {
+              statusRef.current = 'lost';
+              setDanger(100);
+              setStatus('lost');
+              shakeTimerRef.current = 0.5;
+              soundEngine.playFail();
+            }
           }
         }
 
-        // Boss Level 6 Slime Spit!
+        // Boss Slime Spit!
         if (level.scene === 'boss_lair' && freezeTimerRef.current <= 0) {
           bossSlimeTimerRef.current += dt;
           if (bossSlimeTimerRef.current >= 10.5) {
@@ -768,7 +945,6 @@ export const RescueGameStage: React.FC<RescueGameStageProps> = ({
         }
       }
 
-      // Smooth candy spring falling & swapping interpolation
       for (const row of gridRef.current) {
         for (const cell of row) {
           const p = cell.candy;
@@ -795,7 +971,7 @@ export const RescueGameStage: React.FC<RescueGameStageProps> = ({
         showHint:
           statusRef.current === 'playing' &&
           !busyRef.current &&
-          !activeHammer &&
+          !targetTool &&
           idleSecondsRef.current >= 3.5,
       });
 
@@ -808,7 +984,7 @@ export const RescueGameStage: React.FC<RescueGameStageProps> = ({
       world.dispose();
       worldRef.current = null;
     };
-  }, [activeHammer, level, status === 'intro', worldEpoch]);
+  }, [level, status === 'intro', targetTool, worldEpoch]);
 
   if (status === 'intro') {
     return (
@@ -823,6 +999,8 @@ export const RescueGameStage: React.FC<RescueGameStageProps> = ({
   }
 
   const isHighDanger = danger >= 72 && status === 'playing';
+  const movesRemaining =
+    level.moveLimit !== undefined ? Math.max(0, level.moveLimit - movesUsed) : null;
   const rescuePercent =
     tasks.length > 0
       ? Math.round(
@@ -841,7 +1019,6 @@ export const RescueGameStage: React.FC<RescueGameStageProps> = ({
       {/* PREMIUM 3D GAMEPLAY HUD */}
       <div className="w-full max-w-[475px] flex flex-col gap-1.5 z-10">
         <div className="royal-hud-bar rounded-2xl px-2.5 py-1.5 flex items-center justify-between gap-2">
-          {/* Controls */}
           <div className="flex items-center gap-1.5">
             <button
               type="button"
@@ -882,9 +1059,21 @@ export const RescueGameStage: React.FC<RescueGameStageProps> = ({
           <div className="flex items-center gap-2 min-w-0">
             <div className="bg-slate-950/75 border border-amber-300/40 px-2.5 py-0.5 rounded-xl text-center">
               <div className="text-[9px] uppercase tracking-wider text-amber-200/80 leading-none">
-                {lang === 'bn' ? 'চাল' : 'MOVES'}
+                {movesRemaining !== null
+                  ? lang === 'bn'
+                    ? 'বাকি চাল'
+                    : 'LEFT'
+                  : lang === 'bn'
+                    ? 'চাল'
+                    : 'MOVES'}
               </div>
-              <div className="text-xs font-extrabold text-white leading-tight">{movesUsed}</div>
+              <div
+                className={`text-xs font-extrabold leading-tight ${
+                  movesRemaining !== null && movesRemaining <= 5 ? 'text-rose-400' : 'text-white'
+                }`}
+              >
+                {movesRemaining !== null ? movesRemaining : movesUsed}
+              </div>
             </div>
 
             <div className="truncate text-center">
@@ -900,17 +1089,23 @@ export const RescueGameStage: React.FC<RescueGameStageProps> = ({
             </div>
           </div>
 
-          {/* 3D Danger Meter */}
+          {/* 3D Danger + Shield Meter */}
           <div className="flex items-center gap-1.5 bg-slate-950/85 border border-rose-400/50 rounded-xl px-2 py-1 min-w-[96px]">
-            <SerpentDanger3DIcon frozen={isFrozenUI} size={20} />
+            {shieldActiveUI ? (
+              <Shield3DIcon size={20} />
+            ) : (
+              <SerpentDanger3DIcon frozen={isFrozenUI} size={20} />
+            )}
             <div className="flex-1 h-2.5 bg-slate-800 rounded-full overflow-hidden p-0.5">
               <div
                 className={`h-full rounded-full transition-all duration-150 ${
-                  isFrozenUI
-                    ? 'bg-gradient-to-r from-cyan-300 to-sky-500'
-                    : danger >= 72
-                      ? 'bg-gradient-to-r from-orange-500 via-rose-500 to-red-600'
-                      : 'bg-gradient-to-r from-lime-400 via-amber-400 to-orange-500'
+                  shieldActiveUI
+                    ? 'bg-gradient-to-r from-cyan-300 to-emerald-400'
+                    : isFrozenUI
+                      ? 'bg-gradient-to-r from-cyan-300 to-sky-500'
+                      : danger >= 72
+                        ? 'bg-gradient-to-r from-orange-500 via-rose-500 to-red-600'
+                        : 'bg-gradient-to-r from-lime-400 via-amber-400 to-orange-500'
                 }`}
                 style={{ width: `${Math.min(100, Math.round(danger))}%` }}
               />
@@ -920,18 +1115,18 @@ export const RescueGameStage: React.FC<RescueGameStageProps> = ({
 
         {/* Sculpted Objective Pills */}
         <div className="flex items-center justify-center flex-wrap gap-1.5">
-          {tasks.map((tk) => {
+          {tasks.map((tk, idx) => {
             const done = tk.current >= tk.target;
             return (
               <div
-                key={tk.kind}
-                className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold border-2 shadow-md transition ${
+                key={`${tk.kind}-${idx}`}
+                className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] sm:text-xs font-extrabold border-2 shadow-md transition ${
                   done
                     ? 'bg-emerald-950/90 border-emerald-400 text-emerald-200'
                     : 'bg-[#1a2752]/95 border-amber-400/60 text-white'
                 }`}
               >
-                <Task3DIcon kind={tk.kind} size={18} />
+                <Task3DIcon kind={tk.kind} targetColor={tk.targetColor} size={17} />
                 <span>{lang === 'bn' ? tk.labelBn : tk.labelEn}:</span>
                 <span className={done ? 'text-emerald-300' : 'text-amber-300'}>
                   {tk.current}/{tk.target}
@@ -952,11 +1147,10 @@ export const RescueGameStage: React.FC<RescueGameStageProps> = ({
           onPointerUp={handlePointerUp}
           onPointerCancel={handlePointerUp}
           className={`max-h-full max-w-full w-auto h-full aspect-[520/770] rounded-3xl border-2 border-amber-300/55 shadow-[0_14px_40px_rgba(0,0,0,0.7)] ${
-            activeHammer ? 'cursor-crosshair ring-4 ring-amber-300' : 'cursor-pointer'
+            targetTool ? 'cursor-crosshair ring-4 ring-amber-300' : 'cursor-pointer'
           }`}
         />
 
-        {/* Floating Combo / Action Banner */}
         {banner && (
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-20 animate-pop-in">
             <div
@@ -967,71 +1161,121 @@ export const RescueGameStage: React.FC<RescueGameStageProps> = ({
           </div>
         )}
 
-        {activeHammer && (
+        {targetTool && (
           <div className="absolute bottom-3 inset-x-6 candy-btn-orange text-white font-extrabold text-xs sm:text-sm text-center py-2 px-4 rounded-full shadow-2xl animate-bounce pointer-events-none">
-            {lang === 'bn'
-              ? 'যেকোনো বক্স বা ক্যান্ডিতে ট্যাপ করে ভেঙে ফেলো!'
-              : 'Tap any crate, lock, or candy on the 3D board to smash it!'}
+            {targetTool === 'hammer'
+              ? lang === 'bn'
+                ? 'যেকোনো বক্স বা ক্যান্ডিতে ট্যাপ করে ভেঙে ফেলো!'
+                : 'Tap any crate, lock, or candy on the 3D board to smash it!'
+              : lang === 'bn'
+                ? '৩x৩ জিলাপি বোমা ফাটাতে যেকোনো ঘরে ট্যাপ করো!'
+                : 'Tap any cell on the 3D board to detonate a 3x3 Spark Bomb!'}
           </div>
         )}
       </div>
 
-      {/* TACTILE 3D BOOSTER DOCK */}
-      <div className="w-full max-w-[475px] royal-hud-bar rounded-2xl px-3 py-1.5 flex items-center justify-between gap-2.5 z-10">
+      {/* EXPANDED 6-TOOL TACTILE SURVIVAL DOCK */}
+      <div className="w-full max-w-[475px] royal-hud-bar rounded-2xl px-2 py-1.5 grid grid-cols-6 gap-1.5 z-10">
         <button
           type="button"
           onClick={() => {
             soundEngine.unlock();
-            if (boosters.hammer > 0) setActiveHammer((v) => !v);
+            if (boosters.hammer > 0) setTargetTool((cur) => (cur === 'hammer' ? null : 'hammer'));
           }}
           disabled={boosters.hammer <= 0}
-          className={`flex-1 flex items-center justify-center gap-2 py-1.5 px-2.5 rounded-xl font-extrabold text-xs ${
-            activeHammer
+          className={`flex flex-col items-center justify-center py-1 px-1 rounded-xl font-extrabold text-[10px] ${
+            targetTool === 'hammer'
               ? 'candy-btn-orange text-white scale-105'
               : boosters.hammer > 0
                 ? 'candy-booster-slot text-amber-100'
                 : 'bg-slate-900/70 text-slate-500 border border-slate-700 opacity-50'
           }`}
         >
-          <Hammer3DIcon size={22} />
+          <Hammer3DIcon size={20} />
           <span>{lang === 'bn' ? 'হাতুড়ি' : 'Smash'}</span>
-          <span className="bg-slate-950/85 text-amber-300 px-2 py-0.5 rounded-full text-[11px] border border-amber-300/30">
-            {boosters.hammer}
-          </span>
+          <span className="text-amber-300 text-[10px] leading-none">{boosters.hammer}</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            soundEngine.unlock();
+            if (boosters.bomb > 0) setTargetTool((cur) => (cur === 'bomb' ? null : 'bomb'));
+          }}
+          disabled={boosters.bomb <= 0}
+          className={`flex flex-col items-center justify-center py-1 px-1 rounded-xl font-extrabold text-[10px] ${
+            targetTool === 'bomb'
+              ? 'candy-btn-orange text-white scale-105'
+              : boosters.bomb > 0
+                ? 'candy-booster-slot text-orange-100'
+                : 'bg-slate-900/70 text-slate-500 border border-slate-700 opacity-50'
+          }`}
+        >
+          <Bomb3DIcon size={20} />
+          <span>{lang === 'bn' ? 'বোমা' : 'Bomb'}</span>
+          <span className="text-orange-300 text-[10px] leading-none">{boosters.bomb}</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={triggerShieldBooster}
+          disabled={boosters.shield <= 0 || shieldActiveUI}
+          className={`flex flex-col items-center justify-center py-1 px-1 rounded-xl font-extrabold text-[10px] ${
+            shieldActiveUI
+              ? 'candy-btn-green text-white'
+              : boosters.shield > 0
+                ? 'candy-booster-slot text-cyan-100'
+                : 'bg-slate-900/70 text-slate-500 border border-slate-700 opacity-50'
+          }`}
+        >
+          <Shield3DIcon size={20} />
+          <span>{lang === 'bn' ? 'শিল্ড' : 'Shield'}</span>
+          <span className="text-cyan-300 text-[10px] leading-none">{boosters.shield}</span>
         </button>
 
         <button
           type="button"
           onClick={triggerFreezeBooster}
           disabled={boosters.freeze <= 0}
-          className={`flex-1 flex items-center justify-center gap-2 py-1.5 px-2.5 rounded-xl font-extrabold text-xs ${
+          className={`flex flex-col items-center justify-center py-1 px-1 rounded-xl font-extrabold text-[10px] ${
             boosters.freeze > 0
               ? 'candy-booster-slot text-sky-100'
               : 'bg-slate-900/70 text-slate-500 border border-slate-700 opacity-50'
           }`}
         >
-          <Frost3DIcon size={22} />
+          <Frost3DIcon size={20} />
           <span>{lang === 'bn' ? 'ফ্রিজ' : 'Freeze'}</span>
-          <span className="bg-slate-950/85 text-sky-300 px-2 py-0.5 rounded-full text-[11px] border border-sky-300/30">
-            {boosters.freeze}
-          </span>
+          <span className="text-sky-300 text-[10px] leading-none">{boosters.freeze}</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={triggerMagnetBooster}
+          disabled={boosters.magnet <= 0}
+          className={`flex flex-col items-center justify-center py-1 px-1 rounded-xl font-extrabold text-[10px] ${
+            boosters.magnet > 0
+              ? 'candy-booster-slot text-rose-100'
+              : 'bg-slate-900/70 text-slate-500 border border-slate-700 opacity-50'
+          }`}
+        >
+          <Magnet3DIcon size={20} />
+          <span>{lang === 'bn' ? 'ম্যাগনেট' : 'Magnet'}</span>
+          <span className="text-rose-300 text-[10px] leading-none">{boosters.magnet}</span>
         </button>
 
         <button
           type="button"
           onClick={triggerShuffleBooster}
           disabled={boosters.shuffle <= 0}
-          className={`flex-1 flex items-center justify-center gap-2 py-1.5 px-2.5 rounded-xl font-extrabold text-xs ${
+          className={`flex flex-col items-center justify-center py-1 px-1 rounded-xl font-extrabold text-[10px] ${
             boosters.shuffle > 0
               ? 'candy-booster-slot text-purple-100'
               : 'bg-slate-900/70 text-slate-500 border border-slate-700 opacity-50'
           }`}
         >
-          <Shuffle3DIcon size={22} />
+          <Shuffle3DIcon size={20} />
           <span>{lang === 'bn' ? 'শাফল' : 'Shuffle'}</span>
-          <span className="bg-slate-950/85 text-purple-300 px-2 py-0.5 rounded-full text-[11px] border border-purple-300/30">
-            {boosters.shuffle}
-          </span>
+          <span className="text-purple-300 text-[10px] leading-none">{boosters.shuffle}</span>
         </button>
       </div>
 
@@ -1071,7 +1315,7 @@ export const RescueGameStage: React.FC<RescueGameStageProps> = ({
                 className="candy-btn-blue py-2.5 rounded-full font-extrabold text-sm text-white flex items-center justify-center gap-2"
               >
                 <MapIcon className="w-4 h-4" />
-                <span>{lang === 'bn' ? 'মিশন ম্যাপ' : 'Kingdom Map'}</span>
+                <span>{lang === 'bn' ? 'সাগা ম্যাপ' : 'Saga Map'}</span>
               </button>
             </div>
           </div>
@@ -1109,7 +1353,7 @@ export const RescueGameStage: React.FC<RescueGameStageProps> = ({
                 onClick={onBackToMap}
                 className="candy-btn-orange py-2.5 px-6 rounded-full font-extrabold text-sm text-white candy-text-shadow"
               >
-                {lang === 'bn' ? 'মিশন ম্যাপ দেখো' : 'Mission Map'}
+                {lang === 'bn' ? 'সাগা ম্যাপ দেখো' : 'Saga Map'}
               </button>
             </div>
           </div>
@@ -1129,7 +1373,6 @@ export const RescueGameStage: React.FC<RescueGameStageProps> = ({
               {lang === 'bn' ? 'মোচি বেঁচে গেছে!' : 'Mochi Rescued!'}
             </h2>
 
-            {/* 3 Sculpted 3D Gold Stars */}
             <div className="flex items-center justify-center gap-3 my-4">
               {[1, 2, 3].map((s) => (
                 <div
@@ -1145,7 +1388,6 @@ export const RescueGameStage: React.FC<RescueGameStageProps> = ({
               ))}
             </div>
 
-            {/* Score & Floating Booster Reward */}
             <div className="bg-slate-950/75 border border-amber-300/35 rounded-2xl py-3 px-4 mb-5 flex items-center justify-around">
               <div>
                 <div className="text-[11px] font-bold text-indigo-300">
@@ -1174,13 +1416,13 @@ export const RescueGameStage: React.FC<RescueGameStageProps> = ({
                   className="candy-btn-green py-3.5 px-6 rounded-full font-candy text-xl font-extrabold text-white candy-text-shadow flex items-center justify-center gap-2"
                 >
                   <Play className="w-5 h-5 fill-current" />
-                  <span>{lang === 'bn' ? 'পরের টাস্ক মিশন' : 'Next Rescue Mission'}</span>
+                  <span>{lang === 'bn' ? 'পরের মিশন' : 'Next Rescue Mission'}</span>
                 </button>
               ) : (
                 <div className="bg-amber-400/20 border border-amber-300/60 rounded-2xl p-3 text-amber-200 text-sm font-extrabold mb-1">
                   {lang === 'bn'
-                    ? 'অভিনন্দন! তুমি সবগুলো 3D বস মিশন জিতে মোচিকে চিরতরে বাঁচিয়েছ!'
-                    : 'Congratulations! You conquered all 6 3D Rescue Missions!'}
+                    ? 'অভিনন্দন! তুমি সবগুলো ৫৬টি 3D রেসকিউ মিশন জিতেছ!'
+                    : 'Congratulations! You conquered all 56 3D Rescue Missions!'}
                 </div>
               )}
 
@@ -1197,7 +1439,7 @@ export const RescueGameStage: React.FC<RescueGameStageProps> = ({
                   onClick={onBackToMap}
                   className="flex-1 candy-btn-orange py-2.5 rounded-full font-extrabold text-sm text-white"
                 >
-                  {lang === 'bn' ? 'মিশন ম্যাপ' : 'Kingdom Map'}
+                  {lang === 'bn' ? 'সাগা ম্যাপ' : 'Saga Map'}
                 </button>
               </div>
             </div>

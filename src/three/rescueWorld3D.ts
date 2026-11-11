@@ -146,8 +146,9 @@ export class RescueWorld3D {
     this.renderer.toneMappingExposure = 1.12;
 
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color('#141d38');
-    this.scene.fog = new THREE.FogExp2('#141d38', 0.018);
+    const skyHex = level.themePalette?.sky ?? '#141d38';
+    this.scene.background = new THREE.Color(skyHex);
+    this.scene.fog = new THREE.FogExp2(skyHex, 0.018);
 
     this.envTex = createCandyStudioEnvironment(this.renderer);
     this.scene.environment = this.envTex;
@@ -227,9 +228,9 @@ export class RescueWorld3D {
   }
 
   private buildFantasyBackdrop() {
-    // Enchanted Candy Castle Wall & Floating Candy Pillars
+    // Enchanted Regional Backdrop Wall & Pillars
     const wallMat = new THREE.MeshStandardMaterial({
-      color: 0x1e2d52,
+      color: this.level.themePalette?.wall ?? '#1e2d52',
       roughness: 0.65,
       metalness: 0.1,
     });
@@ -238,9 +239,9 @@ export class RescueWorld3D {
     backWall.receiveShadow = true;
     this.scene.add(backWall);
 
-    // Decorative Candy-Striped Side Columns
+    // Decorative Side Columns
     const pillarMat = new THREE.MeshPhysicalMaterial({
-      color: 0xff5c8a,
+      color: this.level.themePalette?.pillar ?? '#ff5c8a',
       roughness: 0.25,
       clearcoat: 0.7,
     });
@@ -263,7 +264,7 @@ export class RescueWorld3D {
         this.scene.add(ring);
       }
 
-      // Decorative Candy Lollipop Finials at top corners!
+      // Decorative Candy Finials at top corners!
       const lolli = new THREE.Mesh(
         new THREE.CylinderGeometry(0.42, 0.42, 0.18, 20),
         new THREE.MeshPhysicalMaterial({
@@ -282,10 +283,10 @@ export class RescueWorld3D {
     const trayW = this.level.cols * TILE_PITCH + 0.58;
     const trayH = this.level.rows * TILE_PITCH + 0.58;
 
-    // Outer Golden-Caramel Beveled Frame
+    // Outer Beveled Frame
     const frameMat = new THREE.MeshPhysicalMaterial({
-      color: 0xf59e0b,
-      emissive: 0x451a03,
+      color: this.level.themePalette?.tray ?? '#f59e0b',
+      emissive: 0x2b1103,
       roughness: 0.22,
       metalness: 0.35,
       clearcoat: 0.9,
@@ -315,22 +316,49 @@ export class RescueWorld3D {
       emissive: 0x291802,
       roughness: 0.38,
     });
+    const tileFlood = new THREE.MeshPhysicalMaterial({
+      color: 0x0e7490,
+      emissive: 0x083344,
+      roughness: 0.16,
+      clearcoat: 0.9,
+    });
+    const tileWind = new THREE.MeshStandardMaterial({
+      color: 0x115e59,
+      emissive: 0x042f2e,
+      roughness: 0.35,
+    });
     const tileGeo = new THREE.BoxGeometry(TILE_PITCH * 0.92, TILE_PITCH * 0.92, 0.08);
     const arrowGeo = new THREE.ConeGeometry(0.12, 0.2, 4);
     const arrowMat = new THREE.MeshBasicMaterial({ color: 0xffde59 });
 
     const hasKeysTask = this.level.tasks.some((t) => t.kind === 'keys');
+    const windRowSet = new Set((this.level.windRows ?? []).map((w) => w.row));
 
     for (let r = 0; r < this.level.rows; r++) {
       for (let c = 0; c < this.level.cols; c++) {
         const pos = this.cellToWorld(r, c);
         const isDrain = this.level.drainColumns.includes(c);
-        const mat = isDrain ? tileDrain : (r + c) % 2 === 0 ? tileLight : tileDark;
+        const isFlooded =
+          this.level.submergedFromRow !== undefined && r >= this.level.submergedFromRow;
+        const isWind = windRowSet.has(r);
+        const mat = isFlooded
+          ? tileFlood
+          : isWind
+            ? tileWind
+            : isDrain
+              ? tileDrain
+              : (r + c) % 2 === 0
+                ? tileLight
+                : tileDark;
         const well = new THREE.Mesh(tileGeo, mat);
         well.position.set(pos.x, pos.y, -0.04);
         this.boardGroup.add(well);
 
-        if (hasKeysTask && r === this.level.rows - 1) {
+        const keyExitRow =
+          this.level.submergedFromRow !== undefined
+            ? this.level.submergedFromRow - 1
+            : this.level.rows - 1;
+        if (hasKeysTask && r === keyExitRow) {
           const arrow = new THREE.Mesh(arrowGeo, arrowMat);
           arrow.rotation.z = Math.PI;
           arrow.position.set(pos.x, pos.y - TILE_PITCH * 0.42, 0.12);

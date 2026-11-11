@@ -381,6 +381,7 @@ export interface StepBlastResult {
   cratesBroken: number;
   iceBroken: number;
   chainsBroken: number;
+  slimesCleared: number;
   specialsTriggered: number;
   drainColumnClears: number;
   beamEffects: Array<{
@@ -399,6 +400,7 @@ export function createEmptyBlastResult(): StepBlastResult {
     cratesBroken: 0,
     iceBroken: 0,
     chainsBroken: 0,
+    slimesCleared: 0,
     specialsTriggered: 0,
     drainColumnClears: 0,
     beamEffects: [],
@@ -481,6 +483,7 @@ export function resolveCellsToClear(
     // If candy has chain or slime, break the lock first without destroying the candy!
     if (cell.blocker === 'chain' || cell.blocker === 'slime') {
       if (cell.blocker === 'chain') res.chainsBroken++;
+      if (cell.blocker === 'slime') res.slimesCleared++;
       cell.blocker = 'none';
       if (cell.candy) cell.candy.wobble = 1;
       continue;
@@ -582,18 +585,23 @@ export function resolveCellsToClear(
   return res;
 }
 
-export function applyGravityAndRefill(grid: GridCell[][], colors: CandyColor[]): boolean {
+export function applyGravityAndRefill(
+  grid: GridCell[][],
+  colors: CandyColor[],
+  submergedFromRow?: number
+): boolean {
   const rows = grid.length;
   const cols = grid[0].length;
   let moved = false;
 
-  // Step 1: Straight vertical drop within unblocked segments
+  const upperMaxRow = submergedFromRow !== undefined ? submergedFromRow - 1 : rows - 1;
+
+  // Step 1A: Standard downward gravity for upper air rows (0 .. upperMaxRow)
   for (let c = 0; c < cols; c++) {
-    for (let r = rows - 1; r >= 0; r--) {
+    for (let r = upperMaxRow; r >= 0; r--) {
       const cell = grid[r][c];
       if (isSolidBlocker(cell.blocker) || cell.candy !== null) continue;
 
-      // Search upward until hitting a solid blocker or locked candy
       for (let up = r - 1; up >= 0; up--) {
         if (isSolidBlocker(grid[up][c].blocker) || isLockedCandyBlocker(grid[up][c].blocker)) {
           break;
@@ -611,10 +619,38 @@ export function applyGravityAndRefill(grid: GridCell[][], colors: CandyColor[]):
     }
   }
 
-  // Step 2: Spawn from top for columns whose top path is clear
+  // Step 1B: Monsoon Dual-Gravity! Submerged rows (submergedFromRow .. rows-1) float UPWARD!
+  if (submergedFromRow !== undefined) {
+    for (let c = 0; c < cols; c++) {
+      for (let r = submergedFromRow; r < rows; r++) {
+        const cell = grid[r][c];
+        if (isSolidBlocker(cell.blocker) || cell.candy !== null) continue;
+
+        for (let down = r + 1; down < rows; down++) {
+          if (
+            isSolidBlocker(grid[down][c].blocker) ||
+            isLockedCandyBlocker(grid[down][c].blocker)
+          ) {
+            break;
+          }
+          if (grid[down][c].candy !== null) {
+            const moving = grid[down][c].candy!;
+            grid[down][c].candy = null;
+            moving.row = r;
+            moving.col = c;
+            cell.candy = moving;
+            moved = true;
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  // Step 2A: Spawn from top for air columns
   for (let c = 0; c < cols; c++) {
     let spawnOffset = -1;
-    for (let r = 0; r < rows; r++) {
+    for (let r = 0; r <= upperMaxRow; r++) {
       const cell = grid[r][c];
       if (isSolidBlocker(cell.blocker) || isLockedCandyBlocker(cell.blocker)) {
         break;
@@ -627,13 +663,31 @@ export function applyGravityAndRefill(grid: GridCell[][], colors: CandyColor[]):
     }
   }
 
-  // Step 3: Diagonal waterfall slide underneath solid crates/chains so pockets never starve!
+  // Step 2B: Spawn buoyant river candies from bottom riverbed for submerged rows!
+  if (submergedFromRow !== undefined) {
+    for (let c = 0; c < cols; c++) {
+      let spawnOffset = rows;
+      for (let r = rows - 1; r >= submergedFromRow; r--) {
+        const cell = grid[r][c];
+        if (isSolidBlocker(cell.blocker) || isLockedCandyBlocker(cell.blocker)) {
+          break;
+        }
+        if (cell.candy === null) {
+          cell.candy = createPiece(r, c, randomColor(colors), 'none', spawnOffset);
+          spawnOffset += 1;
+          moved = true;
+        }
+      }
+    }
+  }
+
+  // Step 3: Diagonal waterfall slide underneath solid crates/chains so air pockets never starve!
   let diagChanged = true;
   let safety = 0;
   while (diagChanged && safety < 12) {
     diagChanged = false;
     safety++;
-    for (let r = rows - 1; r >= 1; r--) {
+    for (let r = upperMaxRow; r >= 1; r--) {
       for (let c = 0; c < cols; c++) {
         const cell = grid[r][c];
         if (isSolidBlocker(cell.blocker) || cell.candy !== null) continue;
@@ -654,8 +708,7 @@ export function applyGravityAndRefill(grid: GridCell[][], colors: CandyColor[]):
             diagChanged = true;
             moved = true;
 
-            // Immediately refill donor column from top if open
-            for (let tr = 0; tr < rows; tr++) {
+            for (let tr = 0; tr <= upperMaxRow; tr++) {
               const tc = grid[tr][nc];
               if (isSolidBlocker(tc.blocker) || isLockedCandyBlocker(tc.blocker)) break;
               if (tc.candy === null) {
@@ -672,21 +725,119 @@ export function applyGravityAndRefill(grid: GridCell[][], colors: CandyColor[]):
   return moved;
 }
 
-export function collectBottomKeys(grid: GridCell[][], colors: CandyColor[]): Array<{ row: number; col: number }> {
+export function applyWindConveyor(
+  grid: GridCell[][],
+  windRows?: Array<{ row: number; dir: 1 | -1 }>
+): boolean {
+  if (!windRows || windRows.length === 0) return false;
+  const rows = grid.length;
+  let shifted = false;
+
+  for (const w of windRows) {
+    if (w.row < 0 || w.row >= rows) continue;
+    const movableCols: number[] = [];
+    const pieces: CandyPiece[] = [];
+    for (let c = 0; c < grid[w.row].length; c++) {
+      const cell = grid[w.row][c];
+      if (
+        cell.candy &&
+        cell.candy.special !== 'key' &&
+        !isSolidBlocker(cell.blocker) &&
+        !isLockedCandyBlocker(cell.blocker)
+      ) {
+        movableCols.push(c);
+        pieces.push(cell.candy);
+      }
+    }
+    if (movableCols.length >= 2) {
+      const len = pieces.length;
+      for (let i = 0; i < len; i++) {
+        const srcIdx = w.dir === 1 ? (i - 1 + len) % len : (i + 1) % len;
+        const targetCol = movableCols[i];
+        const p = pieces[srcIdx];
+        p.row = w.row;
+        p.col = targetCol;
+        grid[w.row][targetCol].candy = p;
+      }
+      shifted = true;
+    }
+  }
+  return shifted;
+}
+
+export function pullKeysWithMagnet(grid: GridCell[][], submergedFromRow?: number): number {
+  const rows = grid.length;
+  const cols = grid[0].length;
+  const targetExitRow = submergedFromRow !== undefined ? submergedFromRow - 1 : rows - 1;
+  let movedCount = 0;
+
+  for (let c = 0; c < cols; c++) {
+    for (let r = rows - 1; r >= 0; r--) {
+      const cell = grid[r][c];
+      if (!cell.candy || cell.candy.special !== 'key') continue;
+      if (isLockedCandyBlocker(cell.blocker)) continue;
+
+      const stepDir = r < targetExitRow ? 1 : r > targetExitRow ? -1 : 0;
+      if (stepDir === 0) continue;
+
+      let curR = r;
+      for (let step = 0; step < 2; step++) {
+        const nextR = curR + stepDir;
+        if (nextR < 0 || nextR >= rows) break;
+        const nextCell = grid[nextR][c];
+        if (
+          isSolidBlocker(nextCell.blocker) ||
+          isLockedCandyBlocker(nextCell.blocker) ||
+          !nextCell.candy ||
+          nextCell.candy.special === 'key'
+        ) {
+          break;
+        }
+        const keyPiece = grid[curR][c].candy!;
+        const swapPiece = nextCell.candy;
+        grid[curR][c].candy = swapPiece;
+        swapPiece.row = curR;
+        nextCell.candy = keyPiece;
+        keyPiece.row = nextR;
+        curR = nextR;
+        movedCount++;
+        if (curR === targetExitRow) break;
+      }
+    }
+  }
+  return movedCount;
+}
+
+export function collectBottomKeys(
+  grid: GridCell[][],
+  colors: CandyColor[],
+  submergedFromRow?: number
+): Array<{ row: number; col: number }> {
   const rows = grid.length;
   const cols = grid[0].length;
   const collected: Array<{ row: number; col: number }> = [];
+  const checkRows =
+    submergedFromRow !== undefined
+      ? [submergedFromRow - 1, submergedFromRow]
+      : [rows - 1];
 
-  for (let c = 0; c < cols; c++) {
-    const bottom = grid[rows - 1][c];
-    if (bottom.candy && bottom.candy.special === 'key' && !isLockedCandyBlocker(bottom.blocker)) {
-      collected.push({ row: rows - 1, col: c });
-      bottom.candy = null;
+  for (const er of checkRows) {
+    if (er < 0 || er >= rows) continue;
+    for (let c = 0; c < cols; c++) {
+      const exitCell = grid[er][c];
+      if (
+        exitCell.candy &&
+        exitCell.candy.special === 'key' &&
+        !isLockedCandyBlocker(exitCell.blocker)
+      ) {
+        collected.push({ row: er, col: c });
+        exitCell.candy = null;
+      }
     }
   }
 
   if (collected.length > 0) {
-    applyGravityAndRefill(grid, colors);
+    applyGravityAndRefill(grid, colors, submergedFromRow);
   }
 
   return collected;

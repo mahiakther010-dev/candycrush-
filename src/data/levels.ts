@@ -1,8 +1,14 @@
 import { LevelConfig } from '../types/game';
+import { EXPANSION_LEVELS } from './expansionLevels';
 
-export const LEVELS: LevelConfig[] = [
+export const BASE_LEVELS: LevelConfig[] = [
   {
     id: 1,
+    chapterNumber: 0,
+    chapterTitleEn: 'Prologue: Candy Kingdom',
+    chapterTitleBn: 'প্রস্তুতি: ক্যান্ডি কিংডম',
+    zoneEn: 'Sugar Gate',
+    zoneBn: 'সুগার গেট',
     scene: 'spiral_marble',
     titleBn: 'মিশন ১: স্পাইরাল টানেল রেসকিউ',
     titleEn: 'Mission 1: Spiral Serpent Escape',
@@ -42,6 +48,11 @@ export const LEVELS: LevelConfig[] = [
   },
   {
     id: 2,
+    chapterNumber: 0,
+    chapterTitleEn: 'Prologue: Candy Kingdom',
+    chapterTitleBn: 'প্রস্তুতি: ক্যান্ডি কিংডম',
+    zoneEn: 'Caramel Lava',
+    zoneBn: 'ক্যারামেল লাভা',
     scene: 'lava_bridge',
     titleBn: 'মিশন ২: লাভা ব্রিজ তৈরি করো',
     titleEn: 'Mission 2: Molten Caramel Bridge',
@@ -82,6 +93,11 @@ export const LEVELS: LevelConfig[] = [
   },
   {
     id: 3,
+    chapterNumber: 0,
+    chapterTitleEn: 'Prologue: Candy Kingdom',
+    chapterTitleBn: 'প্রস্তুতি: ক্যান্ডি কিংডম',
+    zoneEn: 'Key Cavern',
+    zoneBn: 'রহস্য গুহা',
     scene: 'triple_key',
     titleBn: 'মিশন ৩: তিনটি রহস্যময় তালা',
     titleEn: 'Mission 3: Triple Key Dungeon',
@@ -127,6 +143,11 @@ export const LEVELS: LevelConfig[] = [
   },
   {
     id: 4,
+    chapterNumber: 0,
+    chapterTitleEn: 'Prologue: Candy Kingdom',
+    chapterTitleBn: 'প্রস্তুতি: ক্যান্ডি কিংডম',
+    zoneEn: 'Frost Peaks',
+    zoneBn: 'বরফ চূড়া',
     scene: 'frost_dual',
     titleBn: 'মিশন ৪: আইস ক্যানন ও ডাবল মনস্টার',
     titleEn: 'Mission 4: Frost Turret & Dual Chompers',
@@ -169,6 +190,11 @@ export const LEVELS: LevelConfig[] = [
   },
   {
     id: 5,
+    chapterNumber: 0,
+    chapterTitleEn: 'Prologue: Candy Kingdom',
+    chapterTitleBn: 'প্রস্তুতি: ক্যান্ডি কিংডম',
+    zoneEn: 'Boulder Ridge',
+    zoneBn: 'বোল্ডার পাহাড়',
     scene: 'boulder_run',
     titleBn: 'মিশন ৫: জায়ান্ট বোল্ডার রান!',
     titleEn: 'Mission 5: Rolling Jawbreaker Escape',
@@ -213,6 +239,12 @@ export const LEVELS: LevelConfig[] = [
   },
   {
     id: 6,
+    chapterNumber: 0,
+    chapterTitleEn: 'Prologue: Candy Kingdom',
+    chapterTitleBn: 'প্রস্তুতি: ক্যান্ডি কিংডম',
+    zoneEn: 'King’s Citadel',
+    zoneBn: 'ড্রাগন দুর্গ',
+    isBoss: true,
     scene: 'boss_lair',
     titleBn: 'মিশন ৬: ড্রাগন কিং বস রেসকিউ!',
     titleEn: 'Mission 6: Serpent King’s Fortress',
@@ -261,3 +293,6 @@ export const LEVELS: LevelConfig[] = [
     ],
   },
 ];
+
+export const LEVELS: LevelConfig[] = [...BASE_LEVELS, ...EXPANSION_LEVELS];
+

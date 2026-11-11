@@ -1,5 +1,5 @@
 import React from 'react';
-import { TaskKind } from '../../types/game';
+import { CandyColor, TaskKind } from '../../types/game';
 
 export const Star3DIcon: React.FC<{ active?: boolean; size?: number; className?: string }> = ({
   active = true,
@@ -8,13 +8,7 @@ export const Star3DIcon: React.FC<{ active?: boolean; size?: number; className?:
 }) => {
   const uid = React.useId();
   return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 64 64"
-      fill="none"
-      className={className}
-    >
+    <svg width={size} height={size} viewBox="0 0 64 64" fill="none" className={className}>
       <defs>
         <linearGradient id={`starGrad-${uid}`} x1="16" y1="6" x2="48" y2="58" gradientUnits="userSpaceOnUse">
           <stop offset="0%" stopColor={active ? '#FFF7AE' : '#475569'} />
@@ -80,6 +74,44 @@ export const Hammer3DIcon: React.FC<{ size?: number }> = ({ size = 26 }) => (
       strokeWidth="2.5"
     />
     <ellipse cx="22" cy="16" rx="6" ry="2.5" transform="rotate(-35 22 16)" fill="white" fillOpacity="0.7" />
+  </svg>
+);
+
+export const Bomb3DIcon: React.FC<{ size?: number }> = ({ size = 26 }) => (
+  <svg width={size} height={size} viewBox="0 0 64 64" fill="none">
+    <circle cx="30" cy="36" r="20" fill="#1E1B4B" stroke="#FBBF24" strokeWidth="3" />
+    <circle cx="30" cy="36" r="9" fill="#F97316" />
+    <path d="M38 18L48 10" stroke="#FDE047" strokeWidth="4" strokeLinecap="round" />
+    <circle cx="50" cy="9" r="4.5" fill="#FF1E56" />
+  </svg>
+);
+
+export const Shield3DIcon: React.FC<{ size?: number }> = ({ size = 26 }) => (
+  <svg width={size} height={size} viewBox="0 0 64 64" fill="none">
+    <path
+      d="M32 6L52 14V31C52 44.5 43.2 54.2 32 58C20.8 54.2 12 44.5 12 31V14L32 6Z"
+      fill="#06B6D4"
+      stroke="#FEF08A"
+      strokeWidth="3"
+    />
+    <path
+      d="M32 13L45 18.5V30.5C45 40 39.2 47 32 50C24.8 47 19 40 19 30.5V18.5L32 13Z"
+      fill="#E0F2FE"
+      fillOpacity="0.45"
+    />
+  </svg>
+);
+
+export const Magnet3DIcon: React.FC<{ size?: number }> = ({ size = 26 }) => (
+  <svg width={size} height={size} viewBox="0 0 64 64" fill="none">
+    <path
+      d="M18 14V34C18 42.8 24.2 49 32 49C39.8 49 46 42.8 46 34V14"
+      stroke="#EF4444"
+      strokeWidth="11"
+      strokeLinecap="round"
+    />
+    <rect x="12.5" y="10" width="11" height="10" rx="2" fill="#E2E8F0" />
+    <rect x="40.5" y="10" width="11" height="10" rx="2" fill="#E2E8F0" />
   </svg>
 );
 
@@ -173,19 +205,25 @@ export const Crown3DIcon: React.FC<{ size?: number }> = ({ size = 24 }) => (
   </svg>
 );
 
-export const Task3DIcon: React.FC<{ kind: TaskKind; size?: number }> = ({ kind, size = 22 }) => {
+const COLOR_SWATCH: Record<CandyColor, string> = {
+  red: '#FF2A5F',
+  orange: '#FF8C1A',
+  yellow: '#FFD21F',
+  green: '#22C55E',
+  blue: '#0EA5E9',
+  purple: '#A855F7',
+};
+
+export const Task3DIcon: React.FC<{
+  kind: TaskKind;
+  targetColor?: CandyColor;
+  size?: number;
+}> = ({ kind, targetColor = 'yellow', size = 22 }) => {
   switch (kind) {
     case 'marbles':
       return (
         <svg width={size} height={size} viewBox="0 0 64 64" fill="none">
-          <defs>
-            <radialGradient id="marbG" cx="35%" cy="30%" r="65%">
-              <stop offset="0%" stopColor="#FF9EBB" />
-              <stop offset="50%" stopColor="#FF1E56" />
-              <stop offset="100%" stopColor="#880E4F" />
-            </radialGradient>
-          </defs>
-          <circle cx="32" cy="32" r="24" fill="url(#marbG)" stroke="#FFE4E6" strokeWidth="2.5" />
+          <circle cx="32" cy="32" r="24" fill="#FF1E56" stroke="#FFE4E6" strokeWidth="2.5" />
           <ellipse cx="24" cy="21" rx="7" ry="3.5" transform="rotate(-30 24 21)" fill="white" fillOpacity="0.8" />
         </svg>
       );
@@ -226,6 +264,33 @@ export const Task3DIcon: React.FC<{ kind: TaskKind; size?: number }> = ({ kind, 
           <circle cx="32" cy="34" r="20" fill="#311042" stroke="#F472B6" strokeWidth="3" />
           <circle cx="32" cy="34" r="9" fill="#FF6D00" />
           <path d="M32 14L38 6" stroke="#FDE047" strokeWidth="4" strokeLinecap="round" />
+        </svg>
+      );
+    case 'slime':
+      return (
+        <svg width={size} height={size} viewBox="0 0 64 64" fill="none">
+          <path
+            d="M12 36C12 20 22 12 34 14C46 16 54 24 52 38C50 48 40 52 28 52C16 52 12 45 12 36Z"
+            fill="#84CC16"
+            stroke="#ECFCCB"
+            strokeWidth="3"
+          />
+          <circle cx="25" cy="28" r="4" fill="#ECFCCB" />
+          <circle cx="39" cy="35" r="3" fill="#ECFCCB" />
+        </svg>
+      );
+    case 'color_target':
+      return (
+        <svg width={size} height={size} viewBox="0 0 64 64" fill="none">
+          <circle
+            cx="32"
+            cy="32"
+            r="22"
+            fill={COLOR_SWATCH[targetColor]}
+            stroke="#FFFFFF"
+            strokeWidth="3"
+          />
+          <ellipse cx="24" cy="22" rx="7" ry="3.5" transform="rotate(-28 24 22)" fill="white" fillOpacity="0.75" />
         </svg>
       );
     case 'cannon_charge':
