@@ -1,35 +1,43 @@
-# Candy Rescue Saga — মোচিকে বাঁচাও! 🍬🐊
+# Candy Rescue Saga — Mochi 3D Rescue Adventure
 
-একটি টাস্ক-ভিত্তিক 3D-স্টাইল **Match-3 Rescue Game**, যেখানে প্রধান চরিত্র **মোচি (Mochi)**-কে ভয়ংকর সবুজ ড্রাগন, ফুটন্ত ক্যারামেল লাভা ও কাঁটাওয়ালা জায়ান্ট বোল্ডারের হাত থেকে বাঁচানোই মূল লক্ষ্য!
-
-An interactive task-based Match-3 Rescue game built with **React + TypeScript + Vite + High-DPI HTML5 Canvas** and procedural **Web Audio API** sound effects.
+A premium 3D stylized Match-3 Character Rescue puzzle adventure built with **React + TypeScript + Three.js + Vite + Web Audio API**.
 
 ---
 
-## ✨ গেমের ফিচারসমূহ (Key Features)
+## 3D Visual & Technical Architecture
 
-- **মেইন ক্যারেক্টার রেসকিউ (Save Mochi):** প্রতিটি লেভেলে মোচির এক্সপ্রেশন ও অ্যানিমেশন বিপদের মাত্রার সাথে পরিবর্তিত হয়। সময় শেষ হওয়ার আগেই সব টাস্ক পূরণ করে তাকে সোনালি সেফ পোর্টালে পৌঁছে দিতে হয়।
-- **ইন্টারেক্টিভ ইন্ট্রো কাটসিন (Playable Intro):** প্রথম মিশনের শুরুতে ক্যান্ডি সুইচে ট্যাপ করে মোচিকে লাফ দেওয়ানো ও টানেলে ঢোকানোর ইন্টারেক্টিভ দৃশ্য।
-- **৬টি ভিন্নধর্মী রেসকিউ মিশন (6 Unique Task-Based Missions):**
-  1. **স্পাইরাল টানেল রেসকিউ (Spiral Serpent Escape):** মার্বেল সাইলো খালি করে ও বক্স ভেঙে গেট খোলা।
-  2. **লাভা ব্রিজ মিশন (Molten Caramel Bridge):** কমলা ও হলুদ ক্যান্ডি মিলিয়ে ৪টি ক্যান্ডি ব্রিজ তৈরি করা।
-  3. **তিনটি রহস্যময় তালা (Triple Key Dungeon):** ৩টি সোনালি চাবি বোর্ডের নিচে নামিয়ে ৩টি গেট আনলক করা।
-  4. **আইস ক্যানন ও ডাবল মনস্টার (Frost Turret & Dual Chompers):** নীল ক্যান্ডি মিলিয়ে ফ্রিজ শট ছুড়ে দুই দিকের মনস্টারকে থামানো।
-  5. **জায়ান্ট বোল্ডার রান (Rolling Jawbreaker Escape):** চেইন লক ভেঙে ও স্পেশাল পাওয়ার-আপ ফাটিয়ে লিফট চালু করা।
-  6. **ড্রাগন কিং বস ফাইট (Serpent King’s Fortress):** স্লাইম পরিষ্কার করে, চাবি নামিয়ে ও রেইনবো ক্যানন চার্জ করে বসকে পরাজিত করা!
-- **স্পেশাল ক্যান্ডি ও বুস্টার:** Striped Laser (4-match), Wrapped Bomb (L/T-match), Rainbow Color Bomb (5-match), সাথে **🔨 হাতুড়ি (Smash)**, **❄️ ফ্রিজ (Freeze)** এবং **🔀 শাফল (Shuffle)** বুস্টার।
-- **বাংলা ও English সাপোর্ট:** এক ক্লিকে ভাষা ও সাউন্ড পরিবর্তন করার সুবিধা।
+1. **Real-Time Three.js PBR Candy Engine (`src/three/candyMeshes3D.ts`, `src/three/studioEnv.ts`):**
+   - Procedural HDR-style Studio Environment lighting (`PMREMGenerator`) with `ACESFilmicToneMapping`, soft PCF shadows, and `MeshPhysicalMaterial` clearcoat/transmission shaders.
+   - **6 Distinct Sculpted 3D Candies:** Red Strawberry, Blue Faceted Crystal, Yellow Citrus Lemon, Green Orchard Apple, Purple Grape Cluster, and Orange Caramel Swirl.
+   - **4 Premium Special Candies & 3D Blockers:** Glowing Directional Striped Candy, 3D Translucent Cellophane Wrapped Candy, Plasma Energy Bomb, and Gem-Studded Rainbow Color Bomb, plus 3D Golden Keys, Wafer Crates, Frosted Ice Cubes, Iron Chains, and Boss Slime.
+
+2. **Articulated 3D Mochi Character Rig (`src/three/mochiCharacter3D.ts`):**
+   - Preserves Mochi's signature cream marshmallow-cub chibi identity with sculpted 3D hair volume & swaying side-locks, multi-layered anime eyes with dual catchlights & natural blinking, scalloped rose capelet, and pleated skirt.
+   - **Gameplay-Reactive Expressions:** Idle breathing, periodic blinking, cheerful match celebrations, surprised gasps, high-danger trembling with 3D sweat drops, teary failure animation, and spinning jump victory celebration.
+   - *Note on procedural 3D character rig:* Mochi and the Serpent are currently built from articulated procedural Three.js meshes (`THREE.Group` hierarchies) so zero external `.glb` downloads are required; the rig modularly isolates character rendering in `mochiCharacter3D.ts` and `serpentMonster3D.ts` for future custom character sheet/model integration.
+
+3. **3D Rescue Worlds & Monster System (`src/three/rescueWorld3D.ts`, `src/three/serpentMonster3D.ts`):**
+   - All **6 Rescue Missions** rendered in a unified 3D Candy Kingdom arena connected directly to the 3D beveled puzzle board:
+     1. *Spiral Serpent Escape* (3D G-labyrinth + glass marble silo)
+     2. *Molten Caramel Bridge* (3D lava waves + spiked wall + 4 wafer bridge planks)
+     3. *Triple Key Dungeon* (3 crystal laser gates + 3D golden key drops)
+     4. *Frost Turret & Dual Chompers* (Twin 3D serpents + ceiling crystal frost cannon)
+     5. *Rolling Jawbreaker Escape* (Sloped 3D ramp + giant spiked boulder)
+     6. *Serpent King’s Citadel* (Crowned Boss Dragon + slime projectiles + Rainbow Mega-Beam)
+
+4. **Premium Casual 3D UI (`src/components/ui/CandyIcons3D.tsx`):**
+   - Royal gold-trimmed beveled 3D panels, tactile pillow buttons, custom 3D vector emblems (zero emoji placeholders), winding Fantasy Kingdom Mission Map, and animated Mission Intro / Victory / Fail popups.
 
 ---
 
-## 🚀 চালানোর নিয়ম (Getting Started)
+## Running Locally
 
 ```bash
 npm install
 npm run dev
 ```
 
-প্রোডাকশন বিল্ড তৈরি করতে:
+Build production bundle:
 
 ```bash
 npm run build

@@ -1,9 +1,18 @@
 import React, { useEffect, useRef, useState } from 'react';
+import * as THREE from 'three';
 import { Language } from '../types/game';
-import { drawCandyPiece } from '../engine/candyArt';
-import { drawBlueBrickWall, drawMochiCharacter, drawSerpentMonster } from '../engine/rescueRenderer';
+import { createCandyStudioEnvironment, setupCinematicLights } from '../three/studioEnv';
+import { createCandyMesh3D } from '../three/candyMeshes3D';
+import { createMochiRig3D, updateMochiRigAnimation } from '../three/mochiCharacter3D';
+import { createSerpentRig3D, updateSerpentAlongCurve } from '../three/serpentMonster3D';
 import { soundEngine } from '../audio/soundEngine';
-import { HelpCircle, Map as MapIcon, Volume2, VolumeX, X } from 'lucide-react';
+import {
+  Crown3DIcon,
+  Frost3DIcon,
+  Star3DIcon,
+  Task3DIcon,
+} from './ui/CandyIcons3D';
+import { HelpCircle, Map as MapIcon, Play, Volume2, VolumeX, X, Globe } from 'lucide-react';
 
 interface TitleScreenProps {
   lang: Language;
@@ -32,92 +41,144 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
   useEffect(() => {
     const canvas = heroCanvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.15;
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color('#19244d');
+    const envTex = createCandyStudioEnvironment(renderer);
+    scene.environment = envTex;
+
+    const camera = new THREE.PerspectiveCamera(34, 420 / 245, 0.5, 45);
+    camera.position.set(0, 0.45, 8.8);
+    camera.lookAt(0, 0.1, 0);
+
+    setupCinematicLights(scene);
+
+    // Caramel-Gold Pedestal Stage
+    const pedestal = new THREE.Mesh(
+      new THREE.CylinderGeometry(2.1, 2.35, 0.35, 32),
+      new THREE.MeshPhysicalMaterial({
+        color: 0xf59e0b,
+        emissive: 0x451a03,
+        roughness: 0.2,
+        clearcoat: 0.9,
+      })
+    );
+    pedestal.position.set(0.75, -1.25, 0);
+    scene.add(pedestal);
+
+    //Glowing Portal Arch behind Mochi
+    const portalArch = new THREE.Mesh(
+      new THREE.TorusGeometry(1.38, 0.14, 14, 36),
+      new THREE.MeshPhysicalMaterial({
+        color: 0xffcf33,
+        metalness: 0.8,
+        roughness: 0.16,
+        clearcoat: 1,
+      })
+    );
+    portalArch.position.set(0.75, 0.05, -0.8);
+    scene.add(portalArch);
+
+    // 3D Mochi Heroine
+    const mochi = createMochiRig3D();
+    mochi.root.scale.setScalar(1.26);
+    mochi.root.position.set(0.75, -0.25, 0.2);
+    scene.add(mochi.root);
+
+    // 3D Serpent Monster peeking dramatically from the left!
+    const serpent = createSerpentRig3D(14, true);
+    const serpentCurve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(-4.2, -0.6, -0.3),
+      new THREE.Vector3(-2.4, -0.25, 0.1),
+      new THREE.Vector3(-1.15, -0.15, 0.35),
+    ]);
+    scene.add(serpent.root);
+
+    // Orbiting 3D Sculpted Candies Showcase!
+    const showcaseSpecs = [
+      { c: 'red' as const, s: 'none' as const, x: -2.4, y: 1.15, z: 0.5 },
+      { c: 'blue' as const, s: 'wrapped' as const, x: -0.75, y: 1.32, z: 0.45 },
+      { c: 'yellow' as const, s: 'striped_h' as const, x: 2.35, y: 1.12, z: 0.5 },
+      { c: 'purple' as const, s: 'none' as const, x: 2.55, y: -0.45, z: 0.6 },
+      { c: 'green' as const, s: 'rainbow' as const, x: -0.65, y: -1.1, z: 0.9 },
+      { c: 'orange' as const, s: 'key' as const, x: 2.1, y: 0.3, z: 0.8 },
+    ];
+
+    const floatingCandies = showcaseSpecs.map((sp) => {
+      const m = createCandyMesh3D(sp.c, sp.s);
+      m.scale.setScalar(0.86);
+      m.position.set(sp.x, sp.y, sp.z);
+      scene.add(m);
+      return { mesh: m, base: sp };
+    });
 
     let animId = 0;
-    const loop = (now: number) => {
+    const renderLoop = (now: number) => {
       const t = now / 1000;
-      const dpr = window.devicePixelRatio || 1;
-      const W = 400;
-      const H = 220;
-      if (canvas.width !== W * dpr || canvas.height !== H * dpr) {
-        canvas.width = W * dpr;
-        canvas.height = H * dpr;
+      const w = canvas.clientWidth || 420;
+      const h = canvas.clientHeight || 245;
+      if (
+        canvas.width !== Math.floor(w * renderer.getPixelRatio()) ||
+        canvas.height !== Math.floor(h * renderer.getPixelRatio())
+      ) {
+        renderer.setSize(w, h, false);
+        camera.aspect = w / h;
+        camera.updateProjectionMatrix();
       }
 
-      ctx.save();
-      ctx.scale(dpr, dpr);
-      ctx.clearRect(0, 0, W, H);
-
-      drawBlueBrickWall(ctx, 4, 4, W - 8, H - 8);
-
-      // Orange tunnel frame
-      ctx.strokeStyle = '#f59e0b';
-      ctx.lineWidth = 10;
-      ctx.lineCap = 'round';
-      ctx.beginPath();
-      ctx.moveTo(26, H - 34);
-      ctx.lineTo(W - 26, H - 34);
-      ctx.stroke();
-
-      // Slithering green monster chasing from left
-      drawSerpentMonster(
-        ctx,
-        [
-          { x: 24, y: H - 64 },
-          { x: 185 + Math.sin(t * 2) * 14, y: H - 64 },
-        ],
-        1,
-        t,
-        { bodyLength: 155 }
-      );
-
-      // Mochi hopping excitedly on the right!
-      drawMochiCharacter(
-        ctx,
-        295,
-        H - 68,
-        1.22,
-        62,
-        'playing',
-        t,
-        lang === 'bn' ? 'আমাকে বাঁচাও!' : 'Save Me!'
-      );
-
-      // Floating 3D candies around top
-      const floatCandies = [
-        { x: 58, y: 48, c: 'red' as const, s: 'none' as const },
-        { x: 132, y: 38, c: 'yellow' as const, s: 'striped_h' as const },
-        { x: 215, y: 42, c: 'blue' as const, s: 'rainbow' as const },
-        { x: 348, y: 52, c: 'green' as const, s: 'key' as const },
-      ];
-      floatCandies.forEach((fc, idx) => {
-        drawCandyPiece(
-          ctx,
-          fc.x,
-          fc.y + Math.sin(t * 3 + idx * 1.3) * 6,
-          18,
-          fc.c,
-          fc.s,
-          t
-        );
+      updateMochiRigAnimation(mochi, {
+        time: t,
+        danger: 25,
+        status: 'playing',
+        happyTimer: Math.sin(t * 0.9) > 0.35 ? 1 : 0,
+        surprisedTimer: 0,
       });
 
-      ctx.restore();
-      animId = requestAnimationFrame(loop);
+      updateSerpentAlongCurve(
+        serpent,
+        serpentCurve,
+        0.86 + Math.sin(t * 2.2) * 0.06,
+        t,
+        false,
+        true,
+        0.82
+      );
+
+      floatingCandies.forEach((fc, idx) => {
+        fc.mesh.position.y = fc.base.y + Math.sin(t * 2.6 + idx * 1.1) * 0.14;
+        const body = fc.mesh.getObjectByName('candyBody');
+        if (body) {
+          body.rotation.y = t * 1.1 + idx;
+          body.rotation.x = Math.sin(t * 1.8 + idx) * 0.2;
+        }
+      });
+
+      renderer.render(scene, camera);
+      animId = requestAnimationFrame(renderLoop);
     };
 
-    animId = requestAnimationFrame(loop);
-    return () => cancelAnimationFrame(animId);
-  }, [lang]);
+    animId = requestAnimationFrame(renderLoop);
+    return () => {
+      cancelAnimationFrame(animId);
+      envTex.dispose();
+      renderer.dispose();
+    };
+  }, []);
 
   return (
-    <div className="relative w-full h-full flex flex-col items-center justify-center p-4 overflow-y-auto">
-      {/* Top Controls */}
-      <div className="w-full max-w-[420px] flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2 bg-slate-900/80 border border-amber-400/35 px-3 py-1 rounded-full text-xs font-bold text-amber-300">
-          <span>⭐ {totalStars} / 18</span>
+    <div className="relative w-full h-full flex flex-col items-center justify-center p-3 sm:p-5 overflow-y-auto">
+      {/* Top Status & Settings Bar */}
+      <div className="w-full max-w-[440px] flex items-center justify-between mb-3">
+        <div className="royal-hud-bar flex items-center gap-2 px-3.5 py-1.5 rounded-full">
+          <Star3DIcon size={22} active />
+          <span className="text-sm font-extrabold text-amber-200 candy-text-shadow">
+            {totalStars} / 18
+          </span>
         </div>
 
         <div className="flex items-center gap-2">
@@ -127,7 +188,7 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
               soundEngine.unlock();
               setShowGuide(true);
             }}
-            className="p-2 rounded-full bg-slate-900/85 hover:bg-slate-800 border border-white/15 text-amber-300"
+            className="candy-booster-slot p-2 rounded-full text-amber-200"
             title="How to Play"
           >
             <HelpCircle className="w-4 h-4" />
@@ -135,56 +196,64 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
           <button
             type="button"
             onClick={onToggleSound}
-            className="p-2 rounded-full bg-slate-900/85 hover:bg-slate-800 border border-white/15 text-sky-300"
+            className="candy-booster-slot p-2 rounded-full text-sky-200"
+            title="Sound"
           >
             {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
           </button>
           <button
             type="button"
             onClick={onToggleLang}
-            className="px-3 py-1.5 rounded-full bg-slate-900/85 hover:bg-slate-800 border border-white/15 text-xs font-bold text-amber-200"
+            className="candy-booster-slot px-3 py-1.5 rounded-full text-xs font-extrabold text-amber-200 flex items-center gap-1"
           >
-            {lang === 'bn' ? 'English' : 'বাংলা'}
+            <Globe className="w-3.5 h-3.5 text-sky-300" />
+            <span>{lang === 'bn' ? 'EN' : 'বাংলা'}</span>
           </button>
         </div>
       </div>
 
-      {/* Main Card */}
-      <div className="w-full max-w-[420px] bg-gradient-to-b from-[#1e3252]/95 to-[#0d1729]/95 border-2 border-amber-400/60 rounded-[2rem] p-5 shadow-2xl text-center">
-        {/* Candy Logo Crest */}
-        <div className="inline-block bg-gradient-to-b from-amber-200 via-amber-400 to-orange-500 p-1 rounded-3xl shadow-xl mb-3 transform -rotate-1">
-          <div className="bg-gradient-to-b from-rose-600 via-red-600 to-rose-900 px-6 py-2.5 rounded-[1.3rem] border-2 border-amber-100/70">
-            <div className="font-candy text-3xl sm:text-4xl font-extrabold tracking-wide text-amber-200 candy-text-shadow leading-none">
-              Candy Rescue
+      {/* Main Royal 3D Card */}
+      <div className="w-full max-w-[440px] royal-panel-3d rounded-[2.2rem] p-5 text-center relative">
+        {/* Sculpted Multi-Layered Candy Crest Logo */}
+        <div className="inline-block bg-gradient-to-b from-amber-200 via-yellow-400 to-amber-600 p-1.5 rounded-[1.8rem] shadow-2xl mb-3.5 transform -rotate-1">
+          <div className="bg-gradient-to-b from-rose-500 via-pink-600 to-rose-900 px-7 py-2.5 rounded-[1.45rem] border-2 border-amber-100/80 shadow-inner">
+            <div className="flex items-center justify-center gap-2">
+              <Crown3DIcon size={26} />
+              <span className="font-candy text-3xl sm:text-4xl font-extrabold tracking-wide text-amber-200 candy-text-shadow leading-none">
+                Candy Rescue
+              </span>
             </div>
-            <div className="text-xs sm:text-sm font-extrabold text-white tracking-widest uppercase mt-0.5">
-              {lang === 'bn' ? 'মোচিকে বাঁচানোর মিশন!' : 'SAVE MOCHI SAGA'}
+            <div className="text-xs sm:text-sm font-extrabold text-white tracking-widest uppercase mt-1 candy-text-shadow">
+              {lang === 'bn' ? 'মোচিকে বাঁচানোর থ্রিডি অ্যাডভেঞ্চার' : '3D MOCHI RESCUE SAGA'}
             </div>
           </div>
         </div>
 
-        {/* Live Animated Preview Scene */}
-        <div className="w-full rounded-2xl overflow-hidden shadow-inner mb-4 border border-amber-400/30">
-          <canvas ref={heroCanvasRef} className="w-full h-auto aspect-[400/220] block" />
+        {/* Real-Time Three.js 3D Diorama Stage */}
+        <div className="w-full rounded-3xl overflow-hidden border-2 border-amber-300/60 shadow-[0_10px_28px_rgba(0,0,0,0.55)] mb-4 bg-[#19244d]">
+          <canvas ref={heroCanvasRef} className="w-full h-auto aspect-[420/245] block" />
         </div>
 
-        <p className="text-xs sm:text-sm text-slate-200 mb-5 leading-relaxed px-1">
+        <p className="text-xs sm:text-sm text-indigo-100/95 mb-5 leading-relaxed px-2 font-medium">
           {lang === 'bn'
-            ? 'ক্যান্ডি মিলিয়ে মার্বেল খালি করো, সোনালি চাবি নামাও, ব্রিজ বানাও এবং ভয়ংকর সবুজ ড্রাগনের হাত থেকে মোচিকে বাঁচাও!'
-            : 'Match candies to drain marbles, drop golden keys, build bridges, and rescue cute Mochi before the giant Serpent strikes!'}
+            ? 'গ্লসি 3D ক্যান্ডি মিলিয়ে মার্বেল খালি করো, সোনালি চাবি নামাও, লাভা ব্রিজ বানাও এবং ড্রাগনের হাত থেকে মোচিকে বাঁচাও!'
+            : 'Match glossy 3D candies to drain marbles, unlock golden gates, build caramel bridges, and rescue Mochi!'}
         </p>
 
-        {/* Glossy Green PLAY NOW CTA (just like the reference end-card!) */}
-        <div className="flex flex-col gap-3">
+        {/* Prominent 3D Play & Map Buttons */}
+        <div className="flex flex-col gap-3.5">
           <button
             type="button"
             onClick={() => {
               soundEngine.unlock();
               onPlayCurrent();
             }}
-            className="candy-btn-green py-3.5 px-8 rounded-full font-candy text-2xl font-extrabold text-white candy-text-shadow tracking-wide"
+            className="candy-btn-green py-3.5 px-8 rounded-full font-candy text-2xl font-extrabold text-white candy-text-shadow flex items-center justify-center gap-2.5"
           >
-            {lang === 'bn' ? `Play Now • মিশন ${highestLevel}` : `Play Now • Mission ${highestLevel}`}
+            <Play className="w-6 h-6 fill-current" />
+            <span>
+              {lang === 'bn' ? `খেলা শুরু • মিশন ${highestLevel}` : `Play Now • Mission ${highestLevel}`}
+            </span>
           </button>
 
           <button
@@ -193,60 +262,76 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
               soundEngine.unlock();
               onOpenMap();
             }}
-            className="candy-btn-orange py-2.5 px-6 rounded-full font-bold text-base text-white flex items-center justify-center gap-2"
+            className="candy-btn-orange py-3 px-6 rounded-full font-extrabold text-base text-white candy-text-shadow flex items-center justify-center gap-2"
           >
-            <MapIcon className="w-4 h-4" />
-            {lang === 'bn' ? 'সবগুলো রেসকিউ টাস্ক দেখো (৬টি মিশন)' : 'All Rescue Tasks (6 Missions)'}
+            <MapIcon className="w-5 h-5" />
+            <span>
+              {lang === 'bn' ? 'ফ্যান্টাসি মিশন ম্যাপ (৬টি মিশন)' : 'Fantasy Mission Map (6 Missions)'}
+            </span>
           </button>
         </div>
       </div>
 
-      {/* HOW TO PLAY MODAL */}
+      {/* HOW TO PLAY 3D POPUP */}
       {showGuide && (
-        <div className="fixed inset-0 z-40 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-slate-900 border-2 border-amber-400 rounded-3xl p-5 shadow-2xl relative">
+        <div className="fixed inset-0 z-40 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="w-full max-w-md royal-panel-3d rounded-[2rem] p-6 relative animate-pop-in">
             <button
               type="button"
               onClick={() => setShowGuide(false)}
-              className="absolute top-4 right-4 p-1.5 rounded-full bg-slate-800 text-slate-300 hover:text-white"
+              className="absolute top-4 right-4 candy-booster-slot p-1.5 rounded-full text-amber-200"
             >
               <X className="w-4 h-4" />
             </button>
-            <h3 className="text-xl font-extrabold text-amber-300 mb-3">
-              {lang === 'bn' ? '🎮 কীভাবে মোচিকে বাঁচাবে?' : '🎮 How to Rescue Mochi'}
+
+            <h3 className="text-2xl font-extrabold text-amber-300 candy-text-shadow mb-4 text-center">
+              {lang === 'bn' ? 'কীভাবে মোচিকে বাঁচাবে?' : 'How to Rescue Mochi'}
             </h3>
-            <ul className="space-y-2.5 text-xs sm:text-sm text-slate-200 text-left">
-              <li className="bg-slate-800/70 p-2.5 rounded-xl border border-white/10">
-                🍬{' '}
-                {lang === 'bn'
-                  ? 'পাশাপাশি ৩ বা তার বেশি একই রঙের ক্যান্ডি সোয়াইপ করে মেলাও।'
-                  : 'Swipe adjacent candies to match 3 or more of the same color.'}
-              </li>
-              <li className="bg-slate-800/70 p-2.5 rounded-xl border border-white/10">
-                ⚡{' '}
-                {lang === 'bn'
-                  ? '৪টি ক্যান্ডি মেলালে স্ট্রাইপড ব্লাস্ট এবং ৫টি মেলালে রেইনবো কালার বোমা তৈরি হবে!'
-                  : 'Match 4 for a Striped Laser Candy, L/T for a Bomb, and 5 for a Rainbow Color Bomb!'}
-              </li>
-              <li className="bg-slate-800/70 p-2.5 rounded-xl border border-white/10">
-                🗝️{' '}
-                {lang === 'bn'
-                  ? 'প্রতিটি লেভেলে আলাদা টাস্ক থাকে—মার্বেল সরানো, সোনালি চাবি নিচে নামানো, লাভা ব্রিজ তৈরি বা আইস ক্যানন চার্জ করা!'
-                  : 'Each mission has unique rescue tasks: drain marbles, drop keys, build lava bridges, or fire frost turrets!'}
-              </li>
-              <li className="bg-slate-800/70 p-2.5 rounded-xl border border-white/10">
-                🐊{' '}
-                {lang === 'bn'
-                  ? 'উপরের Danger Bar ১০০% হওয়ার আগেই সব টাস্ক শেষ করে মোচিকে সেফ গেটে পৌঁছে দাও!'
-                  : 'Finish all rescue tasks before the monster danger meter hits 100%!'}
-              </li>
-            </ul>
+
+            <div className="space-y-3 text-xs sm:text-sm text-indigo-50 text-left">
+              <div className="flex items-center gap-3 bg-indigo-950/70 p-3 rounded-2xl border border-amber-300/25">
+                <Task3DIcon kind="marbles" size={32} />
+                <span>
+                  {lang === 'bn'
+                    ? 'পাশাপাশি ৩ বা তার বেশি 3D ক্যান্ডি মিলিয়ে মার্বেল ও লক বক্স পরিষ্কার করো।'
+                    : 'Swipe 3 or more matching 3D candies to break blockers and drain candy marbles.'}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-3 bg-indigo-950/70 p-3 rounded-2xl border border-amber-300/25">
+                <Task3DIcon kind="specials" size={32} />
+                <span>
+                  {lang === 'bn'
+                    ? '৪টি মেলালে স্ট্রাইপড ক্যান্ডি, ২x২ বা L-আকারে র‍্যাপড ক্যান্ডি এবং ৫টিতে রেইনবো বোমা তৈরি হয়!'
+                    : 'Match 4 for Striped, 2x2/L for 3D Wrapped Candy, T-shape for Energy Bomb, and 5 for Rainbow Bomb!'}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-3 bg-indigo-950/70 p-3 rounded-2xl border border-amber-300/25">
+                <Task3DIcon kind="keys" size={32} />
+                <span>
+                  {lang === 'bn'
+                    ? 'সোনালি চাবির নিচের ক্যান্ডি মিলিয়ে চাবিগুলো নিচে নামালে উপরের তালা খুলে যাবে।'
+                    : 'Clear candies beneath 3D Golden Keys to drop them to the exit row and unlock Mochi’s gates.'}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-3 bg-indigo-950/70 p-3 rounded-2xl border border-amber-300/25">
+                <Frost3DIcon size={32} />
+                <span>
+                  {lang === 'bn'
+                    ? 'বিপদ বাড়লে হাতুড়ি, ফ্রিজ বা শাফল বুস্টার ব্যবহার করে মোচিকে বাঁচাও!'
+                    : 'Use Smash Hammer, Frost Freeze, and Shuffle boosters whenever danger gets close!'}
+                </span>
+              </div>
+            </div>
+
             <button
               type="button"
               onClick={() => setShowGuide(false)}
-              className="mt-4 w-full candy-btn-green py-2.5 rounded-full font-extrabold text-white"
+              className="mt-5 w-full candy-btn-green py-3 rounded-full font-extrabold text-lg text-white candy-text-shadow"
             >
-              {lang === 'bn' ? 'বুঝেছি! চলো খেলি' : 'Got it! Let’s Rescue!'}
+              {lang === 'bn' ? 'চলো শুরু করি!' : 'Let’s Rescue Mochi!'}
             </button>
           </div>
         </div>

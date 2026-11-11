@@ -1,8 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
+import * as THREE from 'three';
 import { Language } from '../types/game';
-import { drawCandyPiece, drawHintHand } from '../engine/candyArt';
-import { drawBlueBrickWall, drawMochiCharacter } from '../engine/rescueRenderer';
+import { createCandyStudioEnvironment, setupCinematicLights } from '../three/studioEnv';
+import { createCandyMesh3D, createHintHand3D } from '../three/candyMeshes3D';
+import { createMochiRig3D, updateMochiRigAnimation } from '../three/mochiCharacter3D';
+import { createSerpentRig3D, updateSerpentAlongCurve } from '../three/serpentMonster3D';
 import { soundEngine } from '../audio/soundEngine';
+import { FastForward } from 'lucide-react';
 
 interface IntroCutsceneProps {
   lang: Language;
@@ -12,217 +16,236 @@ interface IntroCutsceneProps {
 export const IntroCutscene: React.FC<IntroCutsceneProps> = ({ lang, onComplete }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [step, setStep] = useState<0 | 1 | 2>(0);
-  const stepProgressRef = useRef(0);
+  const stepRef = useRef<0 | 1 | 2>(0);
+  const stepTimeRef = useRef<number>(0);
+  const completedRef = useRef<boolean>(false);
 
   useEffect(() => {
-    stepProgressRef.current = 0;
+    stepRef.current = step;
+    stepTimeRef.current = 0;
   }, [step]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.14;
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color('#151e3d');
+    const envTex = createCandyStudioEnvironment(renderer);
+    scene.environment = envTex;
+
+    const camera = new THREE.PerspectiveCamera(36, 440 / 640, 0.5, 50);
+    camera.position.set(0, 0.4, 13.5);
+    camera.lookAt(0, 0.2, 0);
+
+    setupCinematicLights(scene);
+
+    // 3D Castle Wall & Caramel Ramp
+    const backWall = new THREE.Mesh(
+      new THREE.BoxGeometry(10, 14, 0.5),
+      new THREE.MeshStandardMaterial({ color: 0x1e2d54, roughness: 0.6 })
+    );
+    backWall.position.z = -1.1;
+    scene.add(backWall);
+
+    const ramp = new THREE.Mesh(
+      new THREE.BoxGeometry(6.8, 0.32, 1.1),
+      new THREE.MeshPhysicalMaterial({ color: 0xf59e0b, roughness: 0.22, clearcoat: 0.85 })
+    );
+    ramp.position.set(0.3, -2.55, 0);
+    ramp.rotation.z = -0.14;
+    scene.add(ramp);
+
+    // 3x3 3D Candy Switch Pad on upper-left wall
+    const switchPad = new THREE.Group();
+    switchPad.position.set(-1.35, 1.35, -0.2);
+    switchPad.rotation.y = 0.22;
+    const padFrame = new THREE.Mesh(
+      new THREE.BoxGeometry(2.35, 2.35, 0.28),
+      new THREE.MeshPhysicalMaterial({
+        color: 0x263869,
+        roughness: 0.3,
+        clearcoat: 0.8,
+      })
+    );
+    const padBorder = new THREE.Mesh(
+      new THREE.BoxGeometry(2.52, 2.52, 0.22),
+      new THREE.MeshPhysicalMaterial({
+        color: 0xffcf33,
+        metalness: 0.75,
+        roughness: 0.18,
+        clearcoat: 1,
+      })
+    );
+    padBorder.position.z = -0.04;
+    switchPad.add(padBorder, padFrame);
+
+    const miniColors = [
+      'red',
+      'yellow',
+      'blue',
+      'green',
+      'purple',
+      'orange',
+      'blue',
+      'red',
+      'green',
+    ] as const;
+    for (let r = 0; r < 3; r++) {
+      for (let c = 0; c < 3; c++) {
+        const cm = createCandyMesh3D(miniColors[r * 3 + c], r === 1 && c === 1 ? 'bomb' : 'none');
+        cm.scale.setScalar(0.68);
+        cm.position.set((c - 1) * 0.72, (1 - r) * 0.72, 0.22);
+        switchPad.add(cm);
+      }
+    }
+    scene.add(switchPad);
+
+    // Glowing 3D Tunnel Entrance Arch (revealed in Step 1!)
+    const tunnelGroup = new THREE.Group();
+    tunnelGroup.position.set(-0.2, 1.55, -0.15);
+    tunnelGroup.visible = false;
+    const arch = new THREE.Mesh(
+      new THREE.TorusGeometry(0.95, 0.18, 14, 32),
+      new THREE.MeshPhysicalMaterial({
+        color: 0xff9f1c,
+        emissive: 0x5c2800,
+        roughness: 0.18,
+        clearcoat: 1,
+      })
+    );
+    const portalCore = new THREE.Mesh(
+      new THREE.CircleGeometry(0.86, 28),
+      new THREE.MeshBasicMaterial({ color: 0xffe89e })
+    );
+    portalCore.position.z = -0.05;
+    tunnelGroup.add(arch, portalCore);
+    scene.add(tunnelGroup);
+
+    // 3D Mochi & Chasing 3D Serpent
+    const mochi = createMochiRig3D();
+    mochi.root.scale.setScalar(1.15);
+    mochi.root.position.set(0.55, -1.75, 0.35);
+    scene.add(mochi.root);
+
+    const serpent = createSerpentRig3D(14, false);
+    const serpentCurve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(4.5, -2.2, 0.2),
+      new THREE.Vector3(1.95, -2.0, 0.2),
+    ]);
+    scene.add(serpent.root);
+
+    const hintHand = createHintHand3D();
+    hintHand.scale.setScalar(1.35);
+    scene.add(hintHand);
 
     let animId = 0;
-    let lastTime = performance.now();
+    let last = performance.now();
 
-    const render = (now: number) => {
-      const dt = Math.min(0.05, (now - lastTime) / 1000);
-      lastTime = now;
+    const loop = (now: number) => {
+      const dt = Math.min(0.05, (now - last) / 1000);
+      last = now;
       const t = now / 1000;
-      stepProgressRef.current += dt;
+      stepTimeRef.current += dt;
 
-      const dpr = window.devicePixelRatio || 1;
-      const W = 440;
-      const H = 640;
-      if (canvas.width !== W * dpr || canvas.height !== H * dpr) {
-        canvas.width = W * dpr;
-        canvas.height = H * dpr;
+      const w = canvas.clientWidth || 440;
+      const h = canvas.clientHeight || 640;
+      if (
+        canvas.width !== Math.floor(w * renderer.getPixelRatio()) ||
+        canvas.height !== Math.floor(h * renderer.getPixelRatio())
+      ) {
+        renderer.setSize(w, h, false);
+        camera.aspect = w / h;
+        camera.updateProjectionMatrix();
       }
 
-      ctx.save();
-      ctx.scale(dpr, dpr);
-      ctx.clearRect(0, 0, W, H);
+      updateSerpentAlongCurve(
+        serpent,
+        serpentCurve,
+        0.75 + Math.sin(t * 3) * 0.08,
+        t,
+        false,
+        false,
+        0.75
+      );
 
-      drawBlueBrickWall(ctx, 8, 8, W - 16, H - 16);
+      const curStep = stepRef.current;
+      if (curStep === 0) {
+        switchPad.visible = true;
+        tunnelGroup.visible = false;
+        hintHand.visible = true;
+        hintHand.position.set(-1.1, 1.0, 0.65 + Math.sin(t * 7) * 0.14);
 
-      // Warm glowing portal at bottom-left (like Frame 1!)
-      const glow = ctx.createRadialGradient(30, H - 120, 10, 30, H - 120, 130);
-      glow.addColorStop(0, 'rgba(255, 237, 160, 0.95)');
-      glow.addColorStop(0.5, 'rgba(251, 146, 60, 0.45)');
-      glow.addColorStop(1, 'rgba(251, 146, 60, 0)');
-      ctx.fillStyle = glow;
-      ctx.fillRect(8, H - 250, 180, 230);
+        mochi.root.position.set(0.45, -1.72, 0.35);
+        updateMochiRigAnimation(mochi, {
+          time: t,
+          danger: 76,
+          status: 'playing',
+          happyTimer: 0,
+          surprisedTimer: 1,
+        });
+      } else if (curStep === 1) {
+        switchPad.visible = false;
+        tunnelGroup.visible = true;
+        tunnelGroup.rotation.z = Math.sin(t * 2) * 0.05;
 
-      // Orange diagonal ramp (Frame 1)
-      ctx.save();
-      ctx.strokeStyle = '#f59e0b';
-      ctx.lineWidth = 16;
-      ctx.lineCap = 'round';
-      ctx.beginPath();
-      ctx.moveTo(95, H - 140);
-      ctx.lineTo(W - 16, H - 90);
-      ctx.stroke();
-      ctx.restore();
+        const jumpP = Math.min(1, stepTimeRef.current * 1.65);
+        const mx = THREE.MathUtils.lerp(0.45, 0.85, jumpP);
+        const my = THREE.MathUtils.lerp(-1.72, 0.95, Math.sin(jumpP * Math.PI * 0.5));
+        mochi.root.position.set(mx, my, 0.45);
 
-      // Menacing Green Croc Snout peeking from bottom-right!
-      ctx.save();
-      ctx.translate(W - 42 + Math.sin(t * 5) * 6, H - 128);
-      ctx.rotate(Math.PI);
-      ctx.fillStyle = '#4d9c11';
-      ctx.strokeStyle = '#143302';
-      ctx.lineWidth = 2.5;
-      ctx.beginPath();
-      ctx.roundRect(0, -18, 66, 26, 10);
-      ctx.fill();
-      ctx.stroke();
-      ctx.fillStyle = '#fff';
-      for (const tx of [14, 28, 42]) {
-        ctx.beginPath();
-        ctx.moveTo(tx, 8);
-        ctx.lineTo(tx + 4, 16);
-        ctx.lineTo(tx + 8, 8);
-        ctx.fill();
-      }
-      ctx.beginPath();
-      ctx.arc(18, -10, 6, 0, Math.PI * 2);
-      ctx.fillStyle = '#fde047';
-      ctx.fill();
-      ctx.fillStyle = '#7f1d1d';
-      ctx.fillRect(17, -14, 2.5, 8);
-      ctx.restore();
+        hintHand.visible = true;
+        hintHand.position.set(0.05, 1.25, 0.65 + Math.sin(t * 7) * 0.14);
 
-      // Step 0: Tap the 3x3 Mini Candy Switch on the wall! (Frame 2)
-      if (step === 0) {
-        const padX = 86;
-        const padY = 195;
-        ctx.save();
-        ctx.translate(padX, padY);
-        ctx.transform(1, 0.14, 0, 1, 0, 0);
-        ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
-        ctx.strokeStyle = '#fbbf24';
-        ctx.lineWidth = 4;
-        ctx.beginPath();
-        ctx.roundRect(-62, -62, 124, 124, 14);
-        ctx.fill();
-        ctx.stroke();
-
-        const miniColors = [
-          'green',
-          'orange',
-          'red',
-          'yellow',
-          'green',
-          'orange',
-          'blue',
-          'green',
-          'red',
-        ] as const;
-        for (let r = 0; r < 3; r++) {
-          for (let c = 0; c < 3; c++) {
-            drawCandyPiece(
-              ctx,
-              (c - 1) * 36,
-              (r - 1) * 36,
-              15,
-              miniColors[r * 3 + c],
-              'none',
-              t,
-              c === 1 && r === 1
-            );
-          }
-        }
-        ctx.restore();
-
-        drawHintHand(ctx, padX + 12, padY + 18, t);
-
-        drawMochiCharacter(
-          ctx,
-          245,
-          H - 142,
-          1.22,
-          75,
-          'playing',
-          t,
-          lang === 'bn' ? 'সুইচে ট্যাপ করো!' : 'Tap Switch!'
+        updateMochiRigAnimation(mochi, {
+          time: t,
+          danger: 30,
+          status: 'playing',
+          happyTimer: 1,
+          surprisedTimer: 0,
+        });
+      } else {
+        tunnelGroup.visible = true;
+        hintHand.visible = false;
+        const diveP = Math.min(1, stepTimeRef.current * 2.4);
+        mochi.root.position.set(
+          THREE.MathUtils.lerp(0.85, -0.2, diveP),
+          THREE.MathUtils.lerp(0.95, 1.55, diveP),
+          THREE.MathUtils.lerp(0.45, -0.1, diveP)
         );
-      }
+        mochi.root.scale.setScalar(Math.max(0.08, 1.15 * (1 - diveP * 0.9)));
 
-      // Step 1: Mochi launches up into the air! Tap the Orange Tunnel! (Frame 3)
-      else if (step === 1) {
-        const jumpP = Math.min(1, stepProgressRef.current * 1.8);
-        const mochiX = 245 + (285 - 245) * jumpP;
-        const mochiY = H - 142 - Math.sin(jumpP * Math.PI * 0.65) * 260;
+        updateMochiRigAnimation(mochi, {
+          time: t,
+          danger: 0,
+          status: 'rescuing',
+          happyTimer: 1,
+          surprisedTimer: 0,
+        });
 
-        // Glowing Orange Tunnel Entrance on wall!
-        const tunX = 148;
-        const tunY = 205;
-        ctx.save();
-        ctx.translate(tunX, tunY);
-        ctx.fillStyle = '#7c2d12';
-        ctx.strokeStyle = '#fbbf24';
-        ctx.lineWidth = 6;
-        ctx.beginPath();
-        ctx.roundRect(-52, -46, 104, 92, 12);
-        ctx.fill();
-        ctx.stroke();
-
-        const innerGlow = ctx.createRadialGradient(0, 0, 6, 0, 0, 48);
-        innerGlow.addColorStop(0, 'rgba(254, 240, 138, 0.85)');
-        innerGlow.addColorStop(1, 'rgba(234, 88, 12, 0.15)');
-        ctx.fillStyle = innerGlow;
-        ctx.fillRect(-46, -40, 92, 80);
-        ctx.restore();
-
-        drawHintHand(ctx, tunX + 14, tunY + 20, t);
-        drawMochiCharacter(
-          ctx,
-          mochiX,
-          mochiY,
-          1.28,
-          55,
-          'playing',
-          t,
-          lang === 'bn' ? 'টানেলে ঢোকাও!' : 'Enter Tunnel!'
-        );
-      }
-
-      // Step 2: Mochi dives into tunnel -> Start Game!
-      else {
-        const diveP = Math.min(1, stepProgressRef.current * 2.4);
-        const tunX = 148;
-        const tunY = 205;
-        ctx.save();
-        ctx.translate(tunX, tunY);
-        ctx.fillStyle = '#7c2d12';
-        ctx.strokeStyle = '#fbbf24';
-        ctx.lineWidth = 6;
-        ctx.beginPath();
-        ctx.roundRect(-52, -46, 104, 92, 12);
-        ctx.fill();
-        ctx.stroke();
-        ctx.restore();
-
-        const mx = 285 + (tunX - 285) * diveP;
-        const my = 225 + (tunY - 225) * diveP;
-        const sc = Math.max(0.15, 1.25 * (1 - diveP * 0.85));
-        drawMochiCharacter(ctx, mx, my, sc, 30, 'rescuing', t);
-
-        if (diveP >= 1) {
+        if (diveP >= 1 && !completedRef.current) {
+          completedRef.current = true;
           onComplete();
-          ctx.restore();
           return;
         }
       }
 
-      ctx.restore();
-      animId = requestAnimationFrame(render);
+      renderer.render(scene, camera);
+      animId = requestAnimationFrame(loop);
     };
 
-    animId = requestAnimationFrame(render);
-    return () => cancelAnimationFrame(animId);
-  }, [step, lang, onComplete]);
+    animId = requestAnimationFrame(loop);
+    return () => {
+      cancelAnimationFrame(animId);
+      envTex.dispose();
+      renderer.dispose();
+    };
+  }, [onComplete]);
 
   const handleStageTap = () => {
     soundEngine.unlock();
@@ -236,21 +259,24 @@ export const IntroCutscene: React.FC<IntroCutsceneProps> = ({ lang, onComplete }
   };
 
   return (
-    <div className="relative w-full h-full flex flex-col items-center justify-center p-2">
-      <div className="relative w-full max-w-[430px] aspect-[440/640] max-h-[82vh] rounded-3xl overflow-hidden shadow-2xl border-2 border-amber-400/50 cursor-pointer" onClick={handleStageTap}>
+    <div className="relative w-full h-full flex flex-col items-center justify-center p-3">
+      <div
+        onClick={handleStageTap}
+        className="relative w-full max-w-[440px] aspect-[440/640] max-h-[86vh] royal-panel-3d rounded-[2rem] overflow-hidden cursor-pointer"
+      >
         <canvas ref={canvasRef} className="w-full h-full block" />
 
-        {/* Top Banner & Skip */}
-        <div className="absolute top-3 inset-x-3 flex items-center justify-between pointer-events-none">
-          <div className="bg-slate-950/80 backdrop-blur-md border border-amber-400/40 px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-bold text-amber-200 shadow-lg">
+        <div className="absolute top-3.5 inset-x-3.5 flex items-center justify-between gap-2 pointer-events-none">
+          <div className="royal-hud-bar px-4 py-1.5 rounded-full text-xs sm:text-sm font-extrabold text-amber-200 candy-text-shadow">
             {step === 0
               ? lang === 'bn'
-                ? '⚡ ক্যান্ডি সুইচে ট্যাপ করে মোচিকে লাফ দাওয়াও!'
-                : '⚡ Tap the Candy Switch to launch Mochi!'
+                ? 'ক্যান্ডি সুইচে ট্যাপ করে মোচিকে লাফ দাওয়াও!'
+                : 'Tap the 3D Candy Switch to launch Mochi!'
               : lang === 'bn'
-                ? '🚪 কমলা টানেলে ট্যাপ করে মোচিকে ভেতরে পাঠাও!'
-                : '🚪 Tap the Orange Tunnel to hide Mochi!'}
+                ? 'সোনালি টানেলে ট্যাপ করে মোচিকে ভেতরে পাঠাও!'
+                : 'Tap the Golden Portal to enter the maze!'}
           </div>
+
           <button
             type="button"
             onClick={(e) => {
@@ -258,9 +284,10 @@ export const IntroCutscene: React.FC<IntroCutsceneProps> = ({ lang, onComplete }
               soundEngine.unlock();
               onComplete();
             }}
-            className="pointer-events-auto bg-slate-900/85 hover:bg-slate-800 text-white text-xs font-bold px-3 py-1.5 rounded-full border border-white/20 shadow"
+            className="pointer-events-auto candy-btn-blue px-3.5 py-1.5 rounded-full text-xs font-extrabold text-white flex items-center gap-1"
           >
-            {lang === 'bn' ? 'স্কিপ ⏭' : 'Skip ⏭'}
+            <span>{lang === 'bn' ? 'স্কিপ' : 'Skip'}</span>
+            <FastForward className="w-3.5 h-3.5" />
           </button>
         </div>
       </div>

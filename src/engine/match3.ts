@@ -198,6 +198,44 @@ export function findMatches(
     }
   }
 
+  // Also detect 2x2 squares for Wrapped Candies!
+  for (let r = 0; r < rows - 1; r++) {
+    for (let c = 0; c < cols - 1; c++) {
+      const p00 = grid[r][c].candy;
+      const p01 = grid[r][c + 1].candy;
+      const p10 = grid[r + 1][c].candy;
+      const p11 = grid[r + 1][c + 1].candy;
+      if (
+        p00 &&
+        p01 &&
+        p10 &&
+        p11 &&
+        p00.special !== 'key' &&
+        p00.special !== 'rainbow' &&
+        p01.special !== 'key' &&
+        p01.special !== 'rainbow' &&
+        p10.special !== 'key' &&
+        p10.special !== 'rainbow' &&
+        p11.special !== 'key' &&
+        p11.special !== 'rainbow' &&
+        p00.color === p01.color &&
+        p00.color === p10.color &&
+        p00.color === p11.color
+      ) {
+        runs.push({
+          dir: 'h',
+          color: p00.color,
+          cells: [
+            { row: r, col: c },
+            { row: r, col: c + 1 },
+            { row: r + 1, col: c },
+            { row: r + 1, col: c + 1 },
+          ],
+        });
+      }
+    }
+  }
+
   if (runs.length === 0) return [];
 
   // Merge overlapping runs of the same color to detect L/T/5 shapes
@@ -240,18 +278,30 @@ export function findMatches(
       focusCells.find((fc) => uniqueCells.some((u) => u.row === fc.row && u.col === fc.col)) ??
       uniqueCells[Math.floor(uniqueCells.length / 2)];
 
-    if (maxSingleLine >= 5) {
+    const isSquare2x2 =
+      uniqueCells.length === 4 &&
+      new Set(uniqueCells.map((u) => u.row)).size === 2 &&
+      new Set(uniqueCells.map((u) => u.col)).size === 2;
+
+    if (maxSingleLine >= 5 && !isSquare2x2) {
       spawnSpecial = {
         row: anchor.row,
         col: anchor.col,
         special: 'rainbow',
         color: runs[i].color,
       };
-    } else if (hasBothDirs && uniqueCells.length >= 5) {
+    } else if (hasBothDirs && uniqueCells.length >= 6) {
       spawnSpecial = {
         row: anchor.row,
         col: anchor.col,
         special: 'bomb',
+        color: runs[i].color,
+      };
+    } else if ((hasBothDirs && uniqueCells.length >= 5) || isSquare2x2) {
+      spawnSpecial = {
+        row: anchor.row,
+        col: anchor.col,
+        special: 'wrapped',
         color: runs[i].color,
       };
     } else if (maxSingleLine === 4) {
@@ -467,11 +517,24 @@ export function resolveCellsToClear(
       for (let r = 0; r < rows; r++) {
         queue.push({ row: r, col: cur.col });
       }
-    } else if (piece.special === 'bomb') {
+    } else if (piece.special === 'wrapped') {
       res.specialsTriggered++;
       res.beamEffects.push({ kind: 'bomb', row: cur.row, col: cur.col });
       for (let dr = -1; dr <= 1; dr++) {
         for (let dc = -1; dc <= 1; dc++) {
+          const nr = cur.row + dr;
+          const nc = cur.col + dc;
+          if (nr >= 0 && nr < rows && nc >= 0 && nc < cols) {
+            queue.push({ row: nr, col: nc });
+          }
+        }
+      }
+    } else if (piece.special === 'bomb') {
+      res.specialsTriggered++;
+      res.beamEffects.push({ kind: 'bomb', row: cur.row, col: cur.col });
+      for (let dr = -2; dr <= 2; dr++) {
+        for (let dc = -2; dc <= 2; dc++) {
+          if (Math.abs(dr) + Math.abs(dc) > 3) continue;
           const nr = cur.row + dr;
           const nc = cur.col + dc;
           if (nr >= 0 && nr < rows && nc >= 0 && nc < cols) {

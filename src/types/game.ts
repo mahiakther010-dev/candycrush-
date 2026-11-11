@@ -2,7 +2,14 @@ export type Language = 'bn' | 'en';
 
 export type CandyColor = 'red' | 'orange' | 'yellow' | 'green' | 'blue' | 'purple';
 
-export type SpecialType = 'none' | 'striped_h' | 'striped_v' | 'bomb' | 'rainbow' | 'key';
+export type SpecialType =
+  | 'none'
+  | 'striped_h'
+  | 'striped_v'
+  | 'wrapped'
+  | 'bomb'
+  | 'rainbow'
+  | 'key';
 
 export type BlockerType =
   | 'none'
