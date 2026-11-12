@@ -133,10 +133,11 @@ export const IntroCutscene: React.FC<IntroCutsceneProps> = ({ lang, onComplete }
     mochi.root.position.set(0.55, -1.75, 0.35);
     scene.add(mochi.root);
 
-    const serpent = createSerpentRig3D(14, false);
+    const serpent = createSerpentRig3D(20, false, 'venom_naga');
     const serpentCurve = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(4.5, -2.2, 0.2),
-      new THREE.Vector3(1.95, -2.0, 0.2),
+      new THREE.Vector3(4.8, -2.35, -0.1),
+      new THREE.Vector3(3.15, -1.92, 0.15),
+      new THREE.Vector3(1.85, -1.98, 0.25),
     ]);
     scene.add(serpent.root);
 

@@ -22,7 +22,16 @@ import {
   createHintHand3D,
 } from './candyMeshes3D';
 import { createMochiRig3D, MochiRig3D, updateMochiRigAnimation } from './mochiCharacter3D';
-import { createSerpentRig3D, SerpentRig3D, updateSerpentAlongCurve } from './serpentMonster3D';
+import {
+  createJuggernautBeastRig3D,
+  createMagmaGolemRig3D,
+  createSerpentRig3D,
+  JuggernautBeastRig3D,
+  MagmaGolemRig3D,
+  SerpentRig3D,
+  updateMagmaGolemAnimation,
+  updateSerpentAlongCurve,
+} from './serpentMonster3D';
 
 export interface Marble3D {
   mesh: THREE.Mesh;
@@ -121,8 +130,8 @@ export class RescueWorld3D {
   private gates: THREE.Mesh[] = [];
   private bridgePlanks: THREE.Mesh[] = [];
   private lavaMesh: THREE.Mesh | null = null;
-  private spikeWallGroup: THREE.Group | null = null;
-  private boulderGroup: THREE.Group | null = null;
+  private magmaGolem: MagmaGolemRig3D | null = null;
+  private juggernautBeast: JuggernautBeastRig3D | null = null;
   private frostTurret: THREE.Group | null = null;
   private rainbowBeam: THREE.Mesh | null = null;
 
@@ -211,7 +220,7 @@ export class RescueWorld3D {
     this.fxGroup.add(this.hintHand);
 
     this.mochi = createMochiRig3D();
-    this.mochi.root.scale.setScalar(0.88);
+    this.mochi.root.scale.setScalar(0.96);
 
     this.buildFantasyBackdrop();
     this.buildBoardTray3D();
@@ -641,6 +650,12 @@ export class RescueWorld3D {
     this.addWallBeam(0, ARENA_BASE_Y - 0.12, 8.45, 0.22, 0xf59e0b);
 
     const sc = this.level.scene;
+    const regionalSkin =
+      this.level.isBoss
+        ? ('boss_dragon' as const)
+        : this.level.submergedFromRow !== undefined
+          ? ('river_gharial' as const)
+          : ('venom_naga' as const);
 
     if (sc === 'spiral_marble') {
       this.buildGlassSilo3D(-3.82, -2.15, 1.55, 4.75);
@@ -665,10 +680,10 @@ export class RescueWorld3D {
         new THREE.Vector3(3.18, 2.18, 0.25),
         new THREE.Vector3(-0.15, 2.18, 0.25),
       ]);
-      this.serpentMain = createSerpentRig3D(24, false);
+      this.serpentMain = createSerpentRig3D(24, Boolean(this.level.isBoss), regionalSkin);
       this.arenaGroup.add(this.serpentMain.root);
 
-      this.mochi.root.position.set(-1.05, 2.22, 0.28);
+      this.mochi.root.position.set(-1.05, 2.32, 0.34);
       this.arenaGroup.add(this.mochi.root);
       this.populateMarbles3D(this.level.initialMarbles);
     } else if (sc === 'lava_bridge') {
@@ -696,7 +711,7 @@ export class RescueWorld3D {
       // 4 Candy Wafer Bridge Planks across chasm
       for (let i = 0; i < 4; i++) {
         const plank = new THREE.Mesh(
-          new THREE.BoxGeometry(0.96, 0.26, 0.62),
+          new RoundedBoxGeometry(0.96, 0.26, 0.62, 3, 0.05),
           new THREE.MeshPhysicalMaterial({
             color: 0xffcf33,
             emissive: 0x6b3c00,
@@ -710,29 +725,13 @@ export class RescueWorld3D {
         this.bridgePlanks.push(plank);
       }
 
-      // Advancing Spiked Crusher Wall
-      this.spikeWallGroup = new THREE.Group();
-      const wallBody = new THREE.Mesh(
-        new THREE.BoxGeometry(0.55, 2.6, 0.68),
-        new THREE.MeshStandardMaterial({ color: 0x475569, metalness: 0.75, roughness: 0.3 })
-      );
-      this.spikeWallGroup.add(wallBody);
-      const spikeGeo = new THREE.ConeGeometry(0.14, 0.36, 8);
-      const spikeMat = new THREE.MeshStandardMaterial({
-        color: 0xf1f5f9,
-        metalness: 0.85,
-        roughness: 0.2,
-      });
-      for (const sy of [-0.9, -0.3, 0.3, 0.9]) {
-        const sp = new THREE.Mesh(spikeGeo, spikeMat);
-        sp.rotation.z = -Math.PI * 0.5;
-        sp.position.set(0.42, sy, 0);
-        this.spikeWallGroup.add(sp);
-      }
-      this.spikeWallGroup.position.set(-3.85, 4.55, 0.2);
-      this.arenaGroup.add(this.spikeWallGroup);
+      // Living 3D Volcanic Magma Crusher Golem!
+      this.magmaGolem = createMagmaGolemRig3D();
+      this.magmaGolem.root.scale.setScalar(0.95);
+      this.magmaGolem.root.position.set(-3.75, 4.25, 0.28);
+      this.arenaGroup.add(this.magmaGolem.root);
 
-      this.mochi.root.position.set(-2.55, 3.92, 0.28);
+      this.mochi.root.position.set(-2.55, 4.02, 0.34);
       this.arenaGroup.add(this.mochi.root);
     } else if (sc === 'triple_key') {
       // Upper serpent corridor & Lower 3-Gate corridor
@@ -754,13 +753,13 @@ export class RescueWorld3D {
         new THREE.Vector3(3.25, 2.45, 0.25),
         new THREE.Vector3(-2.1, 2.45, 0.25),
       ]);
-      this.serpentMain = createSerpentRig3D(22, false);
+      this.serpentMain = createSerpentRig3D(22, Boolean(this.level.isBoss), regionalSkin);
       this.arenaGroup.add(this.serpentMain.root);
 
-      this.mochi.root.position.set(2.4, 2.38, 0.28);
+      this.mochi.root.position.set(2.4, 2.48, 0.34);
       this.arenaGroup.add(this.mochi.root);
     } else if (sc === 'frost_dual') {
-      // Symmetrical U-Arena with Twin Serpents + Ceiling Frost Turret + Central Marble Silo!
+      // Symmetrical U-Arena with Twin Glacier Frost Wyrms + Ceiling Frost Turret + Central Marble Silo!
       this.addWallBeam(0, 6.05, 8.1, 0.26);
       this.addWallBeam(-2.55, 3.95, 2.9, 0.24);
       this.addWallBeam(2.55, 3.95, 2.9, 0.24);
@@ -792,21 +791,21 @@ export class RescueWorld3D {
         new THREE.Vector3(3.95, 4.65, 0.25),
         new THREE.Vector3(0.75, 4.65, 0.25),
       ]);
-      this.serpentMain = createSerpentRig3D(15, false);
-      this.serpentTwin = createSerpentRig3D(15, false);
+      this.serpentMain = createSerpentRig3D(15, false, 'frost_wyrm');
+      this.serpentTwin = createSerpentRig3D(15, false, 'frost_wyrm');
       this.arenaGroup.add(this.serpentMain.root, this.serpentTwin.root);
 
-      this.mochi.root.position.set(0, 4.65, 0.28);
+      this.mochi.root.position.set(0, 4.75, 0.34);
       this.arenaGroup.add(this.mochi.root);
       this.populateMarbles3D(this.level.initialMarbles);
     } else if (sc === 'boulder_run') {
-      // Sloped 3D Ramp + Giant Spiked Jawbreaker Boulder!
+      // Sloped 3D Ramp + Living 3D Armored Horned Juggernaut Beast!
       const ramp = new THREE.Mesh(
-        new THREE.BoxGeometry(7.6, 0.3, 0.85),
+        new RoundedBoxGeometry(7.6, 0.3, 0.85, 3, 0.06),
         new THREE.MeshPhysicalMaterial({
           color: 0xf59e0b,
-          roughness: 0.25,
-          clearcoat: 0.8,
+          roughness: 0.22,
+          clearcoat: 0.85,
         })
       );
       ramp.position.set(-0.2, 3.25, 0.08);
@@ -817,36 +816,13 @@ export class RescueWorld3D {
       this.addGate3D(1.55, 3.35, 0.22, 1.55, 0xfbbf24);
       this.buildPortal3D(3.35, 2.55);
 
-      this.boulderGroup = new THREE.Group();
-      const jawSphere = new THREE.Mesh(
-        new THREE.SphereGeometry(0.78, 26, 22),
-        new THREE.MeshPhysicalMaterial({
-          color: 0xe11d48,
-          emissive: 0x4c0519,
-          roughness: 0.14,
-          clearcoat: 1,
-        })
-      );
-      this.boulderGroup.add(jawSphere);
-      const spikeGeo = new THREE.ConeGeometry(0.13, 0.34, 8);
-      const spikeMat = new THREE.MeshStandardMaterial({
-        color: 0xe2e8f0,
-        metalness: 0.85,
-        roughness: 0.2,
-      });
-      for (let i = 0; i < 12; i++) {
-        const ang = (i / 12) * Math.PI * 2;
-        const sp = new THREE.Mesh(spikeGeo, spikeMat);
-        sp.position.set(Math.cos(ang) * 0.85, Math.sin(ang) * 0.85, 0);
-        sp.rotation.z = ang - Math.PI * 0.5;
-        this.boulderGroup.add(sp);
-      }
-      this.arenaGroup.add(this.boulderGroup);
+      this.juggernautBeast = createJuggernautBeastRig3D();
+      this.arenaGroup.add(this.juggernautBeast.root);
 
-      this.mochi.root.position.set(0.5, 3.6, 0.28);
+      this.mochi.root.position.set(0.5, 3.7, 0.34);
       this.arenaGroup.add(this.mochi.root);
     } else {
-      // SCENE 6: BOSS LAIR — Serpent King's Citadel!
+      // SCENE 6: BOSS LAIR — Sovereign Dragon King's Citadel!
       this.buildGlassSilo3D(-3.82, -2.15, 1.55, 4.75);
       this.buildPortal3D(-2.98, 5.55);
 
@@ -861,7 +837,7 @@ export class RescueWorld3D {
       // Rainbow Mega-Beam (activated during rescue victory!)
       this.rainbowBeam = new THREE.Mesh(
         new THREE.CylinderGeometry(0.22, 0.22, 4.8, 16),
-        new THREE.MeshBasicMaterial({ color: 0x38bdf8 })
+        new THREE.MeshBasicMaterial({ color: new THREE.Color(0.5, 1.8, 2.4) })
       );
       this.rainbowBeam.rotation.z = Math.PI * 0.5;
       this.rainbowBeam.position.set(1.2, 2.35, 0.35);
@@ -877,10 +853,10 @@ export class RescueWorld3D {
         new THREE.Vector3(3.15, 2.28, 0.25),
         new THREE.Vector3(-0.15, 2.28, 0.25),
       ]);
-      this.serpentMain = createSerpentRig3D(26, true);
+      this.serpentMain = createSerpentRig3D(26, true, 'boss_dragon');
       this.arenaGroup.add(this.serpentMain.root);
 
-      this.mochi.root.position.set(-1.05, 2.22, 0.28);
+      this.mochi.root.position.set(-1.05, 2.32, 0.34);
       this.arenaGroup.add(this.mochi.root);
       this.populateMarbles3D(this.level.initialMarbles);
     }
@@ -1265,18 +1241,19 @@ export class RescueWorld3D {
           state.danger / 100,
           time,
           isFrozen,
-          false
+          Boolean(this.level.isBoss)
         );
       }
       const mx = isRescued ? THREE.MathUtils.lerp(-1.05, -2.98, Math.min(1, rp * 1.3)) : -1.05;
-      const my = isRescued ? THREE.MathUtils.lerp(2.22, 5.35, Math.max(0, (rp - 0.25) / 0.75)) : 2.22;
-      this.mochi.root.position.set(mx, my, 0.28);
+      const my = isRescued ? THREE.MathUtils.lerp(2.32, 5.35, Math.max(0, (rp - 0.25) / 0.75)) : 2.32;
+      this.mochi.root.position.set(mx, my, 0.34);
     } else if (this.level.scene === 'lava_bridge') {
       if (this.lavaMesh) {
         this.lavaMesh.position.y = 1.65 + (state.danger / 100) * 0.92 + Math.sin(time * 3.5) * 0.05;
       }
-      if (this.spikeWallGroup) {
-        this.spikeWallGroup.position.x = -3.85 + (state.danger / 100) * 1.65;
+      if (this.magmaGolem) {
+        this.magmaGolem.root.position.x = -3.75 + (state.danger / 100) * 1.68;
+        updateMagmaGolemAnimation(this.magmaGolem, time, isFrozen);
       }
       const builtCount = isRescued ? 4 : Math.min(4, Math.floor(overallRatio * 4 + 0.001));
       this.bridgePlanks.forEach((pl, idx) => {
@@ -1284,7 +1261,7 @@ export class RescueWorld3D {
       });
       const baseX = builtCount === 0 ? -2.45 : -1.56 + (builtCount - 1) * 1.04;
       const mx = isRescued ? THREE.MathUtils.lerp(baseX, 3.35, rp) : baseX;
-      this.mochi.root.position.set(mx, 3.85, 0.28);
+      this.mochi.root.position.set(mx, 3.95, 0.34);
     } else if (this.level.scene === 'triple_key') {
       const keysDone = state.tasks.find((t) => t.kind === 'keys')?.current ?? 0;
       this.gates.forEach((g, idx) => {
@@ -1298,13 +1275,13 @@ export class RescueWorld3D {
           state.danger / 100,
           time,
           isFrozen,
-          false
+          Boolean(this.level.isBoss)
         );
       }
       const stops = [2.4, 0.9, -0.6, -2.05];
       const curX = stops[Math.min(3, keysDone)];
       const mx = isRescued ? THREE.MathUtils.lerp(curX, -3.15, rp) : curX;
-      this.mochi.root.position.set(mx, 2.38, 0.28);
+      this.mochi.root.position.set(mx, 2.48, 0.34);
     } else if (this.level.scene === 'frost_dual') {
       if (this.frostTurret) {
         this.frostTurret.rotation.y = time * 2.2;
@@ -1334,8 +1311,8 @@ export class RescueWorld3D {
           0.65
         );
       }
-      const my = isRescued ? THREE.MathUtils.lerp(4.65, 2.15, rp) : 4.65;
-      this.mochi.root.position.set(0, my, 0.28);
+      const my = isRescued ? THREE.MathUtils.lerp(4.75, 2.15, rp) : 4.75;
+      this.mochi.root.position.set(0, my, 0.34);
     } else if (this.level.scene === 'boulder_run') {
       this.gates.forEach((g, idx) => {
         const open = isRescued ? 1 : Math.min(1, Math.max(0, overallRatio * 2 - idx));
@@ -1343,17 +1320,21 @@ export class RescueWorld3D {
       });
       const mochiT = isRescued ? 0.6 + 0.4 * rp : 0.35 + overallRatio * 0.45;
       const mx = THREE.MathUtils.lerp(-3.2, 3.35, mochiT);
-      const my = THREE.MathUtils.lerp(4.85, 2.55, mochiT);
-      this.mochi.root.position.set(mx, my, 0.28);
+      const my = THREE.MathUtils.lerp(4.92, 2.62, mochiT);
+      this.mochi.root.position.set(mx, my, 0.34);
 
-      if (this.boulderGroup) {
+      if (this.juggernautBeast) {
         const bT = (state.danger / 100) * (mochiT - 0.12);
-        this.boulderGroup.position.set(
+        this.juggernautBeast.root.position.set(
           THREE.MathUtils.lerp(-3.5, 3.35, bT),
           THREE.MathUtils.lerp(5.1, 2.75, bT),
           0.25
         );
-        if (!isFrozen) this.boulderGroup.rotation.z -= dt * 5.2;
+        this.juggernautBeast.armorMat.color.setHex(isFrozen ? 0x38bdf8 : 0xbe123c);
+        if (!isFrozen) {
+          this.juggernautBeast.wheelBody.rotation.z -= dt * 5.8;
+          this.juggernautBeast.headVisor.position.y = 0.12 + Math.sin(time * 8) * 0.05;
+        }
       }
     } else {
       // Boss Mission 6
@@ -1378,8 +1359,8 @@ export class RescueWorld3D {
         this.rainbowBeam.scale.x = 1 + Math.sin(time * 28) * 0.25;
       }
       const mx = isRescued ? THREE.MathUtils.lerp(-1.05, -2.98, Math.min(1, rp * 1.25)) : -1.05;
-      const my = isRescued ? THREE.MathUtils.lerp(2.22, 5.35, Math.max(0, (rp - 0.25) / 0.75)) : 2.22;
-      this.mochi.root.position.set(mx, my, 0.28);
+      const my = isRescued ? THREE.MathUtils.lerp(2.32, 5.35, Math.max(0, (rp - 0.25) / 0.75)) : 2.32;
+      this.mochi.root.position.set(mx, my, 0.34);
     }
 
     updateMochiRigAnimation(this.mochi, {
@@ -1388,6 +1369,7 @@ export class RescueWorld3D {
       status: state.status,
       happyTimer: state.happyTimer,
       surprisedTimer: state.surprisedTimer,
+      isMoving: state.status === 'rescuing',
     });
 
     this.composer.render();

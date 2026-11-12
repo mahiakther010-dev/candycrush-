@@ -16,7 +16,8 @@ import {
   Star3DIcon,
   Task3DIcon,
 } from './ui/CandyIcons3D';
-import { HelpCircle, Map as MapIcon, Play, Volume2, VolumeX, X, Globe } from 'lucide-react';
+import { CharacterShowcase3DModal } from './CharacterShowcase3DModal';
+import { HelpCircle, Map as MapIcon, Play, Rotate3d, Volume2, VolumeX, X, Globe } from 'lucide-react';
 
 interface TitleScreenProps {
   lang: Language;
@@ -43,6 +44,7 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
 }) => {
   const heroCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const [showGuide, setShowGuide] = useState(false);
+  const [showShowcase3D, setShowShowcase3D] = useState(false);
 
   useEffect(() => {
     const canvas = heroCanvasRef.current;
@@ -60,13 +62,13 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
     const envTex = createCandyStudioEnvironment(renderer);
     scene.environment = envTex;
 
-    const camera = new THREE.PerspectiveCamera(34, 420 / 245, 0.5, 45);
-    camera.position.set(0, 0.45, 8.8);
-    camera.lookAt(0, 0.1, 0);
+    const camera = new THREE.PerspectiveCamera(32, 420 / 245, 0.5, 45);
+    camera.position.set(0, 0.35, 7.35);
+    camera.lookAt(0, 0.05, 0);
 
     const composer = new EffectComposer(renderer);
     composer.addPass(new RenderPass(scene, camera));
-    const bloomPass = new UnrealBloomPass(new THREE.Vector2(420, 245), 0.36, 0.55, 0.85);
+    const bloomPass = new UnrealBloomPass(new THREE.Vector2(420, 245), 0.34, 0.55, 0.86);
     composer.addPass(bloomPass);
     composer.addPass(new OutputPass());
 
@@ -84,10 +86,10 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
       })
     );
     pedestal.receiveShadow = true;
-    pedestal.position.set(0.75, -1.25, 0);
+    pedestal.position.set(0.82, -1.22, 0);
     scene.add(pedestal);
 
-    //Glowing Portal Arch behind Mochi
+    // Glowing Portal Arch behind Mochi
     const portalArch = new THREE.Mesh(
       new THREE.TorusGeometry(1.38, 0.14, 14, 36),
       new THREE.MeshPhysicalMaterial({
@@ -97,21 +99,23 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
         clearcoat: 1,
       })
     );
-    portalArch.position.set(0.75, 0.05, -0.8);
+    portalArch.position.set(0.82, 0.08, -0.85);
     scene.add(portalArch);
 
-    // 3D Mochi Heroine
+    // Subdivision-Sculpted 3D Mochi Heroine
     const mochi = createMochiRig3D();
-    mochi.root.scale.setScalar(1.26);
-    mochi.root.position.set(0.75, -0.25, 0.2);
+    mochi.root.scale.setScalar(1.32);
+    mochi.root.position.set(0.85, -0.14, 0.32);
+    mochi.root.rotation.y = -0.18;
     scene.add(mochi.root);
 
-    // 3D Serpent Monster peeking dramatically from the left!
-    const serpent = createSerpentRig3D(14, true);
+    // Seamless Continuous Spine-Skinned 3D Sovereign Dragon lunging from the left!
+    const serpent = createSerpentRig3D(24, true, 'boss_dragon');
     const serpentCurve = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(-4.2, -0.6, -0.3),
-      new THREE.Vector3(-2.4, -0.25, 0.1),
-      new THREE.Vector3(-1.15, -0.15, 0.35),
+      new THREE.Vector3(-4.1, -0.95, -0.75),
+      new THREE.Vector3(-2.65, -0.42, -0.15),
+      new THREE.Vector3(-1.75, 0.25, 0.25),
+      new THREE.Vector3(-0.78, 0.18, 0.65),
     ]);
     scene.add(serpent.root);
 
@@ -247,9 +251,19 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
           </div>
         </div>
 
-        {/* Real-Time Three.js 3D Diorama Stage */}
-        <div className="w-full rounded-3xl overflow-hidden border-2 border-amber-300/60 shadow-[0_10px_28px_rgba(0,0,0,0.55)] mb-4 bg-[#19244d]">
+        {/* Real-Time Three.js 3D Diorama Stage (Click to Open 360° Studio!) */}
+        <div
+          onClick={() => {
+            soundEngine.unlock();
+            setShowShowcase3D(true);
+          }}
+          className="relative w-full rounded-3xl overflow-hidden border-2 border-amber-300/60 shadow-[0_10px_28px_rgba(0,0,0,0.55)] mb-4 bg-[#131c3d] cursor-pointer group"
+        >
           <canvas ref={heroCanvasRef} className="w-full h-auto aspect-[420/245] block" />
+          <div className="absolute bottom-2 right-2.5 px-2.5 py-1 rounded-full bg-slate-950/75 border border-amber-300/45 text-[11px] font-extrabold text-amber-200 flex items-center gap-1.5 group-hover:scale-105 transition">
+            <Rotate3d className="w-3.5 h-3.5 text-sky-300" />
+            <span>{lang === 'bn' ? '360° ক্লোজ-আপ দেখুন' : 'Inspect 360°'}</span>
+          </div>
         </div>
 
         <p className="text-xs sm:text-sm text-indigo-100/95 mb-5 leading-relaxed px-2 font-medium">
@@ -289,8 +303,28 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
                 : `Saga World Map (${totalLevels} Missions • 10 Chapters)`}
             </span>
           </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              soundEngine.unlock();
+              setShowShowcase3D(true);
+            }}
+            className="py-2.5 px-5 rounded-full font-extrabold text-sm text-amber-100 bg-gradient-to-r from-indigo-900/90 via-purple-800/90 to-rose-900/90 border-2 border-amber-300/50 shadow-lg hover:brightness-110 transition flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <Rotate3d className="w-4 h-4 text-amber-300" />
+            <span>
+              {lang === 'bn'
+                ? '3D মোচি ও এনিমি স্টুডিও (360° ক্লোজ-আপ ভিউ)'
+                : '3D Mochi & Enemy Studio (360° Close-Up)'}
+            </span>
+          </button>
         </div>
       </div>
+
+      {showShowcase3D && (
+        <CharacterShowcase3DModal lang={lang} onClose={() => setShowShowcase3D(false)} />
+      )}
 
       {/* HOW TO PLAY 3D POPUP */}
       {showGuide && (

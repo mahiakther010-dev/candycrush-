@@ -1,5 +1,7 @@
 import * as THREE from 'three';
+import { LoopSubdivision } from 'three-subdivide';
 import { GameStatus } from '../types/game';
+import { getCharacterTextures } from './characterTextures3D';
 
 export interface MochiRig3D {
   root: THREE.Group;
@@ -8,21 +10,29 @@ export interface MochiRig3D {
   leftEar: THREE.Group;
   rightEar: THREE.Group;
   hairBangs: THREE.Group;
-  leftHairLock: THREE.Mesh;
-  rightHairLock: THREE.Mesh;
+  leftTwinTail: THREE.Group;
+  rightTwinTail: THREE.Group;
   leftArm: THREE.Group;
+  leftForearm: THREE.Group;
   rightArm: THREE.Group;
-  leftFoot: THREE.Mesh;
-  rightFoot: THREE.Mesh;
+  rightForearm: THREE.Group;
+  leftLeg: THREE.Group;
+  leftShin: THREE.Group;
+  rightLeg: THREE.Group;
+  rightShin: THREE.Group;
+  skirtGroup: THREE.Group;
+  capeMesh: THREE.Mesh;
   leftEyeOpen: THREE.Group;
   rightEyeOpen: THREE.Group;
+  leftIrisMesh: THREE.Mesh;
+  rightIrisMesh: THREE.Mesh;
   leftEyelid: THREE.Mesh;
   rightEyelid: THREE.Mesh;
   leftHappyArc: THREE.Mesh;
   rightHappyArc: THREE.Mesh;
   leftBrow: THREE.Mesh;
   rightBrow: THREE.Mesh;
-  mouthSmile: THREE.Mesh;
+  mouthSmile: THREE.Group;
   mouthSurprised: THREE.Mesh;
   mouthSad: THREE.Mesh;
   sweatDrop: THREE.Mesh;
@@ -35,386 +45,748 @@ export interface MochiAnimParams {
   time: number;
   danger: number; // 0..100
   status: GameStatus;
-  happyTimer: number; // > 0 right after matches
-  surprisedTimer: number; // > 0 when hazard/slime triggers
+  happyTimer: number;
+  surprisedTimer: number;
+  isMoving?: boolean;
+  poseOverride?: 'idle' | 'panic' | 'run' | 'victory';
+}
+
+/**
+ * Builds a Subdivision-Smoothed Pixar/Anime Chibi Head Mesh:
+ * Rounded cranium, soft indented eye sockets, plump lower cheeks, delicate tapered chin,
+ * and a cute sculpted 3D button nose contour.
+ */
+function buildSculptedAnimeHeadGeometry(): THREE.BufferGeometry {
+  const base = new THREE.SphereGeometry(0.41, 24, 20);
+  const pos = base.attributes.position;
+  const v = new THREE.Vector3();
+
+  for (let i = 0; i < pos.count; i++) {
+    v.fromBufferAttribute(pos, i);
+    const ny = v.y / 0.41; // -1..1
+    const nx = v.x / 0.41;
+    const nz = v.z / 0.41;
+
+    // 1. Cranium width & soft anime baby-cheeks
+    let widthScale = 1.07;
+    if (ny < 0.05 && ny > -0.58 && nz > 0) {
+      // Plump lower cheeks
+      const cheekFactor = Math.exp(-Math.pow((ny + 0.22) * 3.2, 2)) * Math.max(0, nz);
+      widthScale += cheekFactor * 0.14;
+      v.z += cheekFactor * 0.032;
+    }
+
+    // 2. Delicate tapered chin at bottom
+    if (ny < -0.35) {
+      const chinT = Math.min(1, (-ny - 0.35) / 0.65);
+      widthScale *= 1 - chinT * 0.34;
+      v.z += chinT * 0.035 * Math.max(0, nz + 0.3);
+      v.y += chinT * 0.028;
+    }
+
+    v.x *= widthScale;
+    v.z *= 0.96;
+
+    // 3. Gentle eye-socket concavity on front face so 3D eyes sit naturally inside sockets
+    if (nz > 0.45) {
+      for (const sx of [-0.42, 0.42]) {
+        const dx = nx - sx;
+        const dy = ny + 0.04;
+        const d2 = dx * dx + dy * dy * 1.3;
+        if (d2 < 0.14) {
+          v.z -= (0.14 - d2) * 0.22;
+        }
+      }
+
+      // 4. Cute sculpted anime button nose ridge at center
+      const noseDx = nx;
+      const noseDy = ny + 0.16;
+      const noseD2 = noseDx * noseDx * 2.5 + noseDy * noseDy * 3.2;
+      if (noseD2 < 0.055) {
+        v.z += (0.055 - noseD2) * 0.85;
+      }
+    }
+
+    pos.setXYZ(i, v.x, v.y, v.z);
+  }
+
+  base.computeVertexNormals();
+  return LoopSubdivision.modify(base, 1, { split: false, uvSmooth: true });
+}
+
+/**
+ * Builds a tapered, curved 3D hair lock along a CatmullRomCurve3.
+ */
+function buildTaperedHairLockGeometry(
+  points: THREE.Vector3[],
+  baseRadius: number,
+  tubularSegments = 22,
+  radialSegments = 10
+): THREE.BufferGeometry {
+  const curve = new THREE.CatmullRomCurve3(points);
+  const geo = new THREE.TubeGeometry(curve, tubularSegments, baseRadius, radialSegments, false);
+  const pos = geo.attributes.position;
+  const ringSize = radialSegments + 1;
+
+  for (let i = 0; i <= tubularSegments; i++) {
+    const t = i / tubularSegments;
+    const center = curve.getPointAt(t);
+    // Swell slightly in middle, taper to a fine silky point at tip (t=1) and root (t=0)
+    const taper =
+      Math.sin(Math.min(1, t * 2.8) * Math.PI * 0.5) * Math.pow(1 - t, 0.72) * (1 + 0.18 * Math.sin(t * Math.PI));
+
+    for (let j = 0; j < ringSize; j++) {
+      const idx = i * ringSize + j;
+      const vx = pos.getX(idx) - center.x;
+      const vy = pos.getY(idx) - center.y;
+      const vz = pos.getZ(idx) - center.z;
+      // Slightly flatten hair strand cross-section into a silky ribbon
+      pos.setXYZ(
+        idx,
+        center.x + vx * taper,
+        center.y + vy * taper * 0.85,
+        center.z + vz * taper * 0.78
+      );
+    }
+  }
+
+  geo.computeVertexNormals();
+  return geo;
+}
+
+/**
+ * Builds a Subdivision-Sculpted Laced Riding Boot!
+ */
+function buildSculptedBootGeometry(): THREE.BufferGeometry {
+  const box = new THREE.BoxGeometry(0.18, 0.22, 0.28, 3, 3, 4);
+  const pos = box.attributes.position;
+  for (let i = 0; i < pos.count; i++) {
+    let x = pos.getX(i);
+    let y = pos.getY(i);
+    let z = pos.getZ(i);
+    // Extend rounded toe forward at bottom
+    if (y < 0 && z > 0) {
+      z += 0.065 * (1 - Math.abs(x) / 0.12);
+      y *= 0.88;
+    }
+    // Taper ankle slightly at top
+    if (y > 0.04) {
+      x *= 0.82;
+      z *= 0.82;
+    }
+    pos.setXYZ(i, x, y, z);
+  }
+  box.computeVertexNormals();
+  return LoopSubdivision.modify(box, 1, { split: false });
 }
 
 export function createMochiRig3D(): MochiRig3D {
   const root = new THREE.Group();
+  const tex = getCharacterTextures();
 
+  // Studio-grade Subsurface Porcelain-Peach Skin Material
   const skinMat = new THREE.MeshPhysicalMaterial({
-    color: 0xfff6ed,
-    emissive: 0x422214,
-    emissiveIntensity: 0.34,
-    roughness: 0.28,
-    clearcoat: 0.28,
-    clearcoatRoughness: 0.42,
-    sheen: 0.35,
-    sheenColor: new THREE.Color(0xffd6cc),
-    envMapIntensity: 1.35,
+    map: tex.mochiSkinTex,
+    color: 0xffffff,
+    emissive: 0x471e14,
+    emissiveIntensity: 0.26,
+    roughness: 0.34,
+    metalness: 0.0,
+    clearcoat: 0.18,
+    clearcoatRoughness: 0.48,
+    sheen: 0.45,
+    sheenColor: new THREE.Color(0xffc8be),
+    envMapIntensity: 1.25,
   });
 
+  // Anisotropic Silky Strawberry-Chestnut to Rose Hair Material
   const hairMat = new THREE.MeshPhysicalMaterial({
-    color: 0xffe3d3,
-    emissive: 0x451c25,
-    emissiveIntensity: 0.28,
-    roughness: 0.22,
-    clearcoat: 0.78,
-    clearcoatRoughness: 0.2,
-    sheen: 0.65,
-    sheenColor: new THREE.Color(0xfff0f5),
+    map: tex.mochiHairTex,
+    normalMap: tex.mochiHairNormal,
+    normalScale: new THREE.Vector2(0.32, 0.32),
+    emissive: 0x3b0d20,
+    emissiveIntensity: 0.24,
+    roughness: 0.24,
+    metalness: 0.06,
+    clearcoat: 0.72,
+    clearcoatRoughness: 0.22,
+    sheen: 0.85,
+    sheenColor: new THREE.Color(0xffd6e7),
     envMapIntensity: 1.65,
   });
 
-  const earInnerMat = new THREE.MeshPhysicalMaterial({
-    color: 0xff8fab,
-    emissive: 0x4a0d22,
-    emissiveIntensity: 0.25,
-    roughness: 0.26,
-    sheen: 0.55,
-    clearcoat: 0.4,
+  // Royal Embroidered Velvet Dress Material
+  const dressMat = new THREE.MeshPhysicalMaterial({
+    map: tex.mochiDressTex,
+    emissive: 0x3b071b,
+    emissiveIntensity: 0.24,
+    roughness: 0.36,
+    sheen: 0.92,
+    sheenColor: new THREE.Color(0xffb8d0),
+    clearcoat: 0.28,
+    envMapIntensity: 1.4,
   });
 
-  const capeMat = new THREE.MeshPhysicalMaterial({
-    color: 0xf43f6e,
-    emissive: 0x4a071c,
-    emissiveIntensity: 0.32,
-    roughness: 0.32,
-    sheen: 0.9,
-    sheenColor: new THREE.Color(0xffb3c6),
-    clearcoat: 0.45,
-    envMapIntensity: 1.5,
-  });
-
-  const skirtMat = new THREE.MeshPhysicalMaterial({
-    color: 0xffcdd9,
-    emissive: 0x3d1222,
-    emissiveIntensity: 0.25,
-    roughness: 0.34,
-    sheen: 0.85,
+  // Cream Satin Blouse & Stockings Material
+  const satinCreamMat = new THREE.MeshPhysicalMaterial({
+    color: 0xfff7f2,
+    emissive: 0x331b24,
+    emissiveIntensity: 0.2,
+    roughness: 0.28,
+    sheen: 0.8,
     sheenColor: new THREE.Color(0xffffff),
-    clearcoat: 0.3,
+    clearcoat: 0.35,
   });
 
+  // Royal Crimson-Berry Capelet & Ribbon Material
+  const capeMat = new THREE.MeshPhysicalMaterial({
+    color: 0xe11d58,
+    emissive: 0x4c0519,
+    emissiveIntensity: 0.28,
+    roughness: 0.32,
+    sheen: 0.95,
+    sheenColor: new THREE.Color(0xffacc5),
+    clearcoat: 0.35,
+    side: THREE.DoubleSide,
+  });
+
+  // Polished 24k Gold Filigree & Buckles
   const goldMat = new THREE.MeshPhysicalMaterial({
-    color: 0xffd147,
+    color: 0xffd447,
     emissive: 0x6e4700,
-    emissiveIntensity: 0.65,
+    emissiveIntensity: 0.55,
     roughness: 0.12,
     metalness: 0.92,
     clearcoat: 1.0,
     envMapIntensity: 2.1,
   });
 
-  const bootMat = new THREE.MeshPhysicalMaterial({
-    color: 0xd92656,
+  const rubyGemMat = new THREE.MeshPhysicalMaterial({
+    color: 0xff1744,
+    emissive: 0x990026,
+    emissiveIntensity: 0.85,
+    roughness: 0.04,
+    clearcoat: 1.0,
+    transmission: 0.45,
+    ior: 1.54,
+  });
+
+  const bootLeatherMat = new THREE.MeshPhysicalMaterial({
+    color: 0x9f1239,
+    emissive: 0x2e0512,
+    emissiveIntensity: 0.22,
     roughness: 0.22,
-    clearcoat: 0.75,
+    clearcoat: 0.78,
+    clearcoatRoughness: 0.18,
   });
 
-  const cheekMat = new THREE.MeshBasicMaterial({
-    color: 0xff6b95,
-    transparent: true,
-    opacity: 0.52,
+  const bootSoleMat = new THREE.MeshStandardMaterial({
+    color: 0x29151c,
+    roughness: 0.65,
   });
 
-  const darkFeatureMat = new THREE.MeshBasicMaterial({ color: 0x2b121a });
-  const irisMat = new THREE.MeshPhysicalMaterial({
-    color: 0x9d3464,
-    emissive: 0x3d0921,
-    roughness: 0.08,
+  const lashMat = new THREE.MeshBasicMaterial({ color: 0x240b15 });
+  const mouthCavityMat = new THREE.MeshBasicMaterial({ color: 0x7a0c2e });
+  const tongueMat = new THREE.MeshPhysicalMaterial({
+    color: 0xff7597,
+    emissive: 0x4a0c1d,
+    roughness: 0.25,
+    clearcoat: 0.8,
+  });
+  const teethMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+
+  const eyeIrisMat = new THREE.MeshPhysicalMaterial({
+    map: tex.mochiIrisTex,
+    roughness: 0.03,
     clearcoat: 1.0,
-  });
-  const whiteMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
-  const waterMat = new THREE.MeshPhysicalMaterial({
-    color: 0x5ce1ff,
-    emissive: 0x0a5880,
-    transparent: true,
-    opacity: 0.88,
-    roughness: 0.05,
-    clearcoat: 1.0,
+    clearcoatRoughness: 0.01,
+    ior: 1.38,
+    envMapIntensity: 1.9,
   });
 
-  // Ground contact shadow
+  const tearMat = new THREE.MeshPhysicalMaterial({
+    color: 0x7dd3fc,
+    emissive: 0x0369a1,
+    emissiveIntensity: 0.35,
+    roughness: 0.02,
+    clearcoat: 1.0,
+    transmission: 0.75,
+    ior: 1.33,
+  });
+
+  // Soft Ground Contact Shadow
   const shadow = new THREE.Mesh(
-    new THREE.CircleGeometry(0.56, 24),
+    new THREE.CircleGeometry(0.54, 28),
     new THREE.MeshBasicMaterial({
-      color: 0x050812,
+      color: 0x040712,
       transparent: true,
-      opacity: 0.44,
+      opacity: 0.46,
       depthWrite: false,
     })
   );
   shadow.rotation.x = -Math.PI * 0.5;
-  shadow.position.y = -0.62;
+  shadow.position.y = -0.78;
   root.add(shadow);
 
   const bodyPivot = new THREE.Group();
   root.add(bodyPivot);
 
-  // Cute Berry Boots / Feet
-  const footGeo = new THREE.SphereGeometry(0.14, 14, 12);
-  footGeo.scale(1.1, 0.75, 1.35);
-  const leftFoot = new THREE.Mesh(footGeo, bootMat);
-  leftFoot.position.set(-0.18, -0.53, 0.06);
-  const rightFoot = new THREE.Mesh(footGeo, bootMat);
-  rightFoot.position.set(0.18, -0.53, 0.06);
-  bodyPivot.add(leftFoot, rightFoot);
+  // ================= 1. ARTICULATED LEGS, KNEES & LACED RIDING BOOTS =================
+  const bootGeo = buildSculptedBootGeometry();
+  const buildArticulatedLeg = (side: -1 | 1) => {
+    const hipGroup = new THREE.Group();
+    hipGroup.position.set(side * 0.135, -0.35, 0.01);
 
-  // Torso & Pleated Pastel Skirt with sculpted folds!
-  const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.31, 0.42, 20), skinMat);
-  torso.position.y = -0.22;
-  bodyPivot.add(torso);
+    // Upper thigh
+    const thigh = new THREE.Mesh(new THREE.CapsuleGeometry(0.068, 0.13, 8, 14), skinMat);
+    thigh.position.y = -0.08;
+    hipGroup.add(thigh);
 
+    // Knee & Stocking Shin Pivot
+    const shinGroup = new THREE.Group();
+    shinGroup.position.y = -0.17;
+    hipGroup.add(shinGroup);
+
+    const stocking = new THREE.Mesh(new THREE.CapsuleGeometry(0.06, 0.13, 8, 14), satinCreamMat);
+    stocking.position.y = -0.07;
+    shinGroup.add(stocking);
+
+    // Ruffled boot cuff
+    const bootCuff = new THREE.Mesh(new THREE.TorusGeometry(0.072, 0.026, 10, 18), satinCreamMat);
+    bootCuff.rotation.x = Math.PI * 0.5;
+    bootCuff.position.y = -0.13;
+    shinGroup.add(bootCuff);
+
+    // Sculpted Laced Berry-Leather Boot
+    const boot = new THREE.Mesh(bootGeo, bootLeatherMat);
+    boot.position.set(0, -0.21, 0.03);
+    shinGroup.add(boot);
+
+    // Boot Sole & Gold Buckle
+    const sole = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.035, 0.27), bootSoleMat);
+    sole.position.set(0, -0.295, 0.038);
+    shinGroup.add(sole);
+
+    const buckle = new THREE.Mesh(new THREE.BoxGeometry(0.065, 0.045, 0.025), goldMat);
+    buckle.position.set(0, -0.19, 0.155);
+    shinGroup.add(buckle);
+
+    return { hipGroup, shinGroup };
+  };
+
+  const leftLegRig = buildArticulatedLeg(-1);
+  const rightLegRig = buildArticulatedLeg(1);
+  bodyPivot.add(leftLegRig.hipGroup, rightLegRig.hipGroup);
+
+  // ================= 2. SCULPTED WAISTED BODICE, PLEATED SKIRT & CAPELET =================
+  // Slender Neck
+  const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.105, 0.16, 16), skinMat);
+  neck.position.set(0, 0.05, 0.01);
+  bodyPivot.add(neck);
+
+  // Sculpted Lathe Corset Bodice (cinched waist + gentle chest contour)
+  const bodicePts = [
+    new THREE.Vector2(0.01, 0.04),
+    new THREE.Vector2(0.14, 0.03),
+    new THREE.Vector2(0.21, -0.06),
+    new THREE.Vector2(0.175, -0.18), // Cinched waist!
+    new THREE.Vector2(0.22, -0.26),
+  ];
+  const bodice = new THREE.Mesh(new THREE.LatheGeometry(bodicePts, 24), dressMat);
+  bodice.scale.set(1.06, 1, 0.88);
+  bodice.position.y = -0.01;
+  bodyPivot.add(bodice);
+
+  // White Satin Sweetheart Collar + Gold Waist Belt
+  const collar = new THREE.Mesh(new THREE.TorusGeometry(0.135, 0.034, 10, 22), satinCreamMat);
+  collar.rotation.x = Math.PI * 0.52;
+  collar.position.set(0, 0.0, 0.01);
+  bodyPivot.add(collar);
+
+  const waistBelt = new THREE.Mesh(new THREE.TorusGeometry(0.175, 0.024, 10, 24), goldMat);
+  waistBelt.rotation.x = Math.PI * 0.5;
+  waistBelt.scale.set(1.06, 0.88, 1);
+  waistBelt.position.y = -0.19;
+  bodyPivot.add(waistBelt);
+
+  // Flared 16-Pleat Royal Skirt + Fluffy Petticoat Underskirt
   const skirtGroup = new THREE.Group();
-  skirtGroup.position.y = -0.34;
-  const skirtBase = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.25, 0.39, 0.24, 20, 1, false),
-    skirtMat
-  );
-  skirtGroup.add(skirtBase);
-
-  // 12 sculpted pleats around skirt
-  const pleatGeo = new THREE.CapsuleGeometry(0.045, 0.14, 6, 8);
-  for (let i = 0; i < 12; i++) {
-    const ang = (i / 12) * Math.PI * 2;
-    const pleat = new THREE.Mesh(pleatGeo, skirtMat);
-    pleat.position.set(Math.cos(ang) * 0.33, -0.02, Math.sin(ang) * 0.33);
-    pleat.rotation.z = Math.cos(ang) * -0.22;
-    pleat.rotation.x = Math.sin(ang) * 0.22;
-    skirtGroup.add(pleat);
-  }
+  skirtGroup.position.y = -0.21;
   bodyPivot.add(skirtGroup);
 
-  // Scalloped Strawberry-Rose Capelet Collar + Gold Heart Gem Brooch!
-  const cape = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.22, 0.35, 0.19, 20),
+  const petticoat = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.17, 0.36, 0.22, 24, 1, false),
+    satinCreamMat
+  );
+  petticoat.position.y = -0.11;
+  skirtGroup.add(petticoat);
+
+  const outerSkirt = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.18, 0.39, 0.23, 28, 2, true),
+    dressMat
+  );
+  outerSkirt.position.y = -0.1;
+  skirtGroup.add(outerSkirt);
+
+  const pleatGeo = new THREE.CapsuleGeometry(0.042, 0.16, 6, 10);
+  for (let i = 0; i < 16; i++) {
+    const a = (i / 16) * Math.PI * 2;
+    const pleat = new THREE.Mesh(pleatGeo, dressMat);
+    pleat.position.set(Math.cos(a) * 0.29, -0.1, Math.sin(a) * 0.27);
+    pleat.rotation.z = Math.cos(a) * -0.38;
+    pleat.rotation.x = Math.sin(a) * 0.38;
+    skirtGroup.add(pleat);
+  }
+
+  // Flowing Royal Capelet + Faceted Ruby-Gold Brooch
+  const capeMesh = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.16, 0.41, 0.32, 24, 2, true, Math.PI * 0.68, Math.PI * 1.64),
     capeMat
   );
-  cape.position.y = -0.11;
-  bodyPivot.add(cape);
+  capeMesh.position.set(0, -0.12, -0.03);
+  bodyPivot.add(capeMesh);
 
-  const brooch = new THREE.Mesh(new THREE.OctahedronGeometry(0.075, 0), goldMat);
-  brooch.position.set(0, -0.1, 0.31);
-  bodyPivot.add(brooch);
+  const broochFrame = new THREE.Mesh(new THREE.OctahedronGeometry(0.068, 0), goldMat);
+  broochFrame.scale.set(1.1, 1.1, 0.55);
+  broochFrame.position.set(0, -0.05, 0.195);
+  const broochGem = new THREE.Mesh(new THREE.OctahedronGeometry(0.046, 1), rubyGemMat);
+  broochGem.position.z = 0.025;
+  broochFrame.add(broochGem);
+  bodyPivot.add(broochFrame);
 
-  // Articulated Plump Arms
-  const armGeo = new THREE.CapsuleGeometry(0.088, 0.19, 8, 12);
-  const leftArm = new THREE.Group();
-  leftArm.position.set(-0.28, -0.09, 0.04);
-  const leftArmMesh = new THREE.Mesh(armGeo, skinMat);
-  leftArmMesh.position.set(-0.08, -0.1, 0);
-  leftArmMesh.rotation.z = -0.35;
-  leftArm.add(leftArmMesh);
+  // ================= 3. ARTICULATED ARMS, PUFF SLEEVES, FOREARMS & SCULPTED HANDS =================
+  const buildArticulatedArm = (side: -1 | 1) => {
+    const shoulderGroup = new THREE.Group();
+    shoulderGroup.position.set(side * 0.205, -0.035, 0.01);
 
-  const rightArm = new THREE.Group();
-  rightArm.position.set(0.28, -0.09, 0.04);
-  const rightArmMesh = new THREE.Mesh(armGeo, skinMat);
-  rightArmMesh.position.set(0.08, -0.1, 0);
-  rightArmMesh.rotation.z = 0.35;
-  rightArm.add(rightArmMesh);
+    // Royal Puff Sleeve
+    const puff = new THREE.Mesh(new THREE.SphereGeometry(0.088, 16, 14), satinCreamMat);
+    puff.scale.set(1.05, 1.12, 0.98);
+    puff.position.set(side * 0.02, -0.02, 0);
+    shoulderGroup.add(puff);
 
-  bodyPivot.add(leftArm, rightArm);
+    const sleeveBand = new THREE.Mesh(new THREE.TorusGeometry(0.062, 0.015, 8, 16), goldMat);
+    sleeveBand.rotation.x = Math.PI * 0.5;
+    sleeveBand.rotation.y = side * 0.25;
+    sleeveBand.position.set(side * 0.035, -0.085, 0);
+    shoulderGroup.add(sleeveBand);
 
-  // ================= SCULPTED CHIBI HEAD & HAIR =================
+    // Upper Arm
+    const upperArm = new THREE.Mesh(new THREE.CapsuleGeometry(0.048, 0.1, 8, 12), skinMat);
+    upperArm.position.set(side * 0.045, -0.11, 0);
+    upperArm.rotation.z = side * 0.22;
+    shoulderGroup.add(upperArm);
+
+    // Elbow & Forearm Pivot
+    const forearmGroup = new THREE.Group();
+    forearmGroup.position.set(side * 0.07, -0.18, 0.01);
+    shoulderGroup.add(forearmGroup);
+
+    const forearm = new THREE.Mesh(new THREE.CapsuleGeometry(0.044, 0.105, 8, 12), skinMat);
+    forearm.position.set(side * 0.02, -0.065, 0.02);
+    forearm.rotation.z = side * 0.12;
+    forearmGroup.add(forearm);
+
+    // Sculpted 3D Anime Hand (Palm + Fingers + Opposable Thumb!)
+    const handGroup = new THREE.Group();
+    handGroup.position.set(side * 0.035, -0.145, 0.035);
+    forearmGroup.add(handGroup);
+
+    const palm = new THREE.Mesh(new THREE.SphereGeometry(0.052, 14, 12), skinMat);
+    palm.scale.set(0.95, 1.12, 0.68);
+    handGroup.add(palm);
+
+    const thumb = new THREE.Mesh(new THREE.CapsuleGeometry(0.018, 0.032, 6, 8), skinMat);
+    thumb.position.set(-side * 0.042, 0.01, 0.022);
+    thumb.rotation.z = side * 0.65;
+    handGroup.add(thumb);
+
+    for (let f = 0; f < 3; f++) {
+      const finger = new THREE.Mesh(new THREE.CapsuleGeometry(0.015, 0.036, 6, 8), skinMat);
+      finger.position.set((f - 1) * 0.024, -0.048, 0.01);
+      handGroup.add(finger);
+    }
+
+    return { shoulderGroup, forearmGroup };
+  };
+
+  const leftArmRig = buildArticulatedArm(-1);
+  const rightArmRig = buildArticulatedArm(1);
+  bodyPivot.add(leftArmRig.shoulderGroup, rightArmRig.shoulderGroup);
+
+  // ================= 4. SUBDIVISION-SCULPTED HEAD, PIXAR EYES & SILK TWIN-TAILS =================
   const headGroup = new THREE.Group();
-  headGroup.position.set(0, 0.24, 0);
+  headGroup.position.set(0, 0.36, 0.02);
   bodyPivot.add(headGroup);
 
-  const headMesh = new THREE.Mesh(new THREE.SphereGeometry(0.42, 28, 24), skinMat);
-  headMesh.scale.set(1.08, 0.98, 0.96);
+  const headGeo = buildSculptedAnimeHeadGeometry();
+  const headMesh = new THREE.Mesh(headGeo, skinMat);
   headGroup.add(headMesh);
 
-  // Signature Twin Marshmallow Puff-Ears with satin pink cushions!
-  const makeEar = (side: -1 | 1) => {
-    const earG = new THREE.Group();
-    earG.position.set(side * 0.34, 0.34, -0.02);
-    earG.rotation.z = side * -0.24;
+  // Delicate Anime Ears on sides of head
+  for (const side of [-1, 1] as const) {
+    const humanEar = new THREE.Mesh(new THREE.SphereGeometry(0.072, 12, 10), skinMat);
+    humanEar.scale.set(0.45, 0.95, 0.68);
+    humanEar.position.set(side * 0.425, -0.04, -0.02);
+    humanEar.rotation.y = side * -0.25;
+    headGroup.add(humanEar);
+  }
 
-    const outer = new THREE.Mesh(new THREE.SphereGeometry(0.165, 18, 16), skinMat);
-    outer.scale.set(1, 1.08, 0.72);
-    earG.add(outer);
+  // Iconic Cute Ribbon-Wrapped Hair Buns (kept as leftEar/rightEar for expressive droop/perk!)
+  const makeHairBunRibbon = (side: -1 | 1) => {
+    const bunG = new THREE.Group();
+    bunG.position.set(side * 0.34, 0.32, -0.04);
+    bunG.rotation.z = side * -0.32;
 
-    const inner = new THREE.Mesh(new THREE.SphereGeometry(0.095, 14, 12), earInnerMat);
-    inner.scale.set(1, 1.05, 0.45);
-    inner.position.set(0, -0.01, 0.09);
-    earG.add(inner);
-    return earG;
+    const bun = new THREE.Mesh(new THREE.SphereGeometry(0.145, 20, 16), hairMat);
+    bun.scale.set(1.06, 0.96, 0.96);
+    bunG.add(bun);
+
+    // Sculpted 3D Satin Ribbon Bow at base of bun
+    const bowCenter = new THREE.Mesh(new THREE.SphereGeometry(0.045, 12, 10), capeMat);
+    bowCenter.position.set(0, -0.08, 0.09);
+    bunG.add(bowCenter);
+
+    for (const bSide of [-1, 1]) {
+      const loop = new THREE.Mesh(new THREE.ConeGeometry(0.068, 0.13, 12), capeMat);
+      loop.scale.set(1, 1, 0.52);
+      loop.rotation.z = bSide * Math.PI * 0.46;
+      loop.position.set(bSide * 0.065, -0.075, 0.085);
+      bunG.add(loop);
+    }
+
+    const starPin = new THREE.Mesh(new THREE.OctahedronGeometry(0.038, 0), goldMat);
+    starPin.position.set(0, -0.08, 0.135);
+    bunG.add(starPin);
+
+    return bunG;
   };
-  const leftEar = makeEar(-1);
-  const rightEar = makeEar(1);
+  const leftEar = makeHairBunRibbon(-1);
+  const rightEar = makeHairBunRibbon(1);
   headGroup.add(leftEar, rightEar);
 
-  // Voluminous 3D Anime Hair Cap, Bangs, Swaying Side-Locks & Berry Ribbon Bow!
-  const hairCap = new THREE.Mesh(
-    new THREE.SphereGeometry(0.435, 24, 18, 0, Math.PI * 2, 0, Math.PI * 0.58),
+  // Voluminous Back Hair Crown
+  const hairCrown = new THREE.Mesh(
+    new THREE.SphereGeometry(0.445, 28, 22, 0, Math.PI * 2, 0, Math.PI * 0.66),
     hairMat
   );
-  hairCap.scale.set(1.1, 1.02, 1.0);
-  hairCap.rotation.x = -0.16;
-  hairCap.position.y = 0.03;
-  headGroup.add(hairCap);
+  hairCrown.scale.set(1.09, 1.04, 1.03);
+  hairCrown.rotation.x = -0.26;
+  hairCrown.position.set(0, 0.03, -0.02);
+  headGroup.add(hairCrown);
 
+  // Sculpted Curved 3D Forehead Bangs (7 tapered TubeGeometry locks!)
   const hairBangs = new THREE.Group();
-  hairBangs.position.set(0, 0.24, 0.34);
-  const bangConfigs: Array<[number, number, number, number]> = [
-    [-0.17, 0.01, 0.26, 0.9],
-    [-0.05, 0.03, 0.08, 1.05],
-    [0.08, 0.02, -0.1, 1.0],
-    [0.2, 0.0, -0.28, 0.85],
-  ];
-  for (const [bx, by, rotZ, sc] of bangConfigs) {
-    const tuft = new THREE.Mesh(new THREE.ConeGeometry(0.095 * sc, 0.24 * sc, 12), hairMat);
-    tuft.rotation.z = Math.PI + rotZ;
-    tuft.rotation.x = 0.28;
-    tuft.position.set(bx, by, 0);
-    hairBangs.add(tuft);
-  }
   headGroup.add(hairBangs);
 
-  // Swaying side hair locks framing cheeks
-  const lockGeo = new THREE.CapsuleGeometry(0.068, 0.22, 8, 10);
-  const leftHairLock = new THREE.Mesh(lockGeo, hairMat);
-  leftHairLock.position.set(-0.4, -0.04, 0.22);
-  leftHairLock.rotation.z = 0.15;
+  const bangSpecs: Array<{ xTop: number; xMid: number; xTip: number; yTip: number; zMid: number; r: number }> = [
+    { xTop: 0.0, xMid: 0.01, xTip: 0.02, yTip: 0.05, zMid: 0.435, r: 0.078 },
+    { xTop: -0.08, xMid: -0.13, xTip: -0.15, yTip: 0.07, zMid: 0.42, r: 0.074 },
+    { xTop: 0.08, xMid: 0.13, xTip: 0.15, yTip: 0.07, zMid: 0.42, r: 0.074 },
+    { xTop: -0.16, xMid: -0.25, xTip: -0.29, yTip: 0.04, zMid: 0.37, r: 0.068 },
+    { xTop: 0.16, xMid: 0.25, xTip: 0.29, yTip: 0.04, zMid: 0.37, r: 0.068 },
+    { xTop: -0.24, xMid: -0.35, xTip: -0.39, yTip: -0.14, zMid: 0.26, r: 0.065 }, // Cheek-framing lock!
+    { xTop: 0.24, xMid: 0.35, xTip: 0.39, yTip: -0.14, zMid: 0.26, r: 0.065 },
+  ];
 
-  const rightHairLock = new THREE.Mesh(lockGeo, hairMat);
-  rightHairLock.position.set(0.4, -0.04, 0.22);
-  rightHairLock.rotation.z = -0.15;
-  headGroup.add(leftHairLock, rightHairLock);
-
-  // Cute Glossy Berry-Pink Ribbon Bow by right ear!
-  const bowGroup = new THREE.Group();
-  bowGroup.position.set(0.22, 0.38, 0.18);
-  bowGroup.rotation.z = -0.28;
-  const bowLoopGeo = new THREE.SphereGeometry(0.09, 12, 10);
-  bowLoopGeo.scale(1.3, 0.85, 0.55);
-  const bowL = new THREE.Mesh(bowLoopGeo, capeMat);
-  bowL.position.x = -0.09;
-  const bowR = new THREE.Mesh(bowLoopGeo, capeMat);
-  bowR.position.x = 0.09;
-  const bowKnot = new THREE.Mesh(new THREE.SphereGeometry(0.05, 10, 10), goldMat);
-  bowGroup.add(bowL, bowR, bowKnot);
-  headGroup.add(bowGroup);
-
-  // Rosy Cheeks
-  const cheekGeo = new THREE.CircleGeometry(0.078, 16);
-  const leftCheek = new THREE.Mesh(cheekGeo, cheekMat);
-  leftCheek.position.set(-0.24, -0.08, 0.37);
-  leftCheek.rotation.y = -0.42;
-  const rightCheek = new THREE.Mesh(cheekGeo, cheekMat);
-  rightCheek.position.set(0.24, -0.08, 0.37);
-  rightCheek.rotation.y = 0.42;
-  headGroup.add(leftCheek, rightCheek);
-
-  // ================= MULTI-LAYERED ANIME EYES =================
-  const buildEye = (side: -1 | 1) => {
-    const eyeRoot = new THREE.Group();
-    eyeRoot.position.set(side * 0.155, -0.01, 0.385);
-    eyeRoot.rotation.y = side * 0.24;
-
-    const sclera = new THREE.Mesh(new THREE.SphereGeometry(0.095, 16, 14), whiteMat);
-    sclera.scale.set(0.95, 1.12, 0.35);
-    eyeRoot.add(sclera);
-
-    const iris = new THREE.Mesh(new THREE.SphereGeometry(0.076, 16, 14), irisMat);
-    iris.scale.set(0.95, 1.12, 0.36);
-    iris.position.z = 0.012;
-    eyeRoot.add(iris);
-
-    const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.048, 14, 12), darkFeatureMat);
-    pupil.scale.set(0.95, 1.12, 0.38);
-    pupil.position.z = 0.022;
-    eyeRoot.add(pupil);
-
-    // Dual glossy specular catchlights!
-    const specBig = new THREE.Mesh(new THREE.SphereGeometry(0.024, 10, 10), whiteMat);
-    specBig.position.set(-0.024, 0.032, 0.042);
-    const specSmall = new THREE.Mesh(new THREE.SphereGeometry(0.013, 8, 8), whiteMat);
-    specSmall.position.set(0.024, -0.028, 0.042);
-    eyeRoot.add(specBig, specSmall);
-
-    // Blinking upper eyelid
-    const eyelid = new THREE.Mesh(
-      new THREE.SphereGeometry(0.102, 16, 12, 0, Math.PI * 2, 0, Math.PI * 0.55),
-      skinMat
+  for (const bs of bangSpecs) {
+    const lockGeo = buildTaperedHairLockGeometry(
+      [
+        new THREE.Vector3(bs.xTop * 0.6, 0.42, 0.14),
+        new THREE.Vector3(bs.xMid, 0.25, bs.zMid),
+        new THREE.Vector3(bs.xTip, bs.yTip, bs.zMid - 0.035),
+      ],
+      bs.r,
+      18,
+      10
     );
-    eyelid.scale.set(0.98, 1.14, 0.42);
-    eyelid.rotation.x = -1.35; // Open by default
-    eyeRoot.add(eyelid);
+    const lockMesh = new THREE.Mesh(lockGeo, hairMat);
+    hairBangs.add(lockMesh);
+  }
 
-    return { eyeRoot, eyelid };
+  // Long Flowing Curled Twin-Tails!
+  const buildTwinTail = (side: -1 | 1) => {
+    const tailPivot = new THREE.Group();
+    tailPivot.position.set(side * 0.36, 0.26, -0.06);
+
+    const mainStrand = new THREE.Mesh(
+      buildTaperedHairLockGeometry(
+        [
+          new THREE.Vector3(0, 0.04, 0),
+          new THREE.Vector3(side * 0.16, -0.16, -0.04),
+          new THREE.Vector3(side * 0.22, -0.44, 0.04),
+          new THREE.Vector3(side * 0.12, -0.68, 0.1),
+        ],
+        0.115,
+        24,
+        12
+      ),
+      hairMat
+    );
+    const curlStrand = new THREE.Mesh(
+      buildTaperedHairLockGeometry(
+        [
+          new THREE.Vector3(side * 0.02, 0.02, -0.03),
+          new THREE.Vector3(side * 0.22, -0.22, -0.1),
+          new THREE.Vector3(side * 0.16, -0.52, -0.05),
+          new THREE.Vector3(side * 0.24, -0.72, 0.04),
+        ],
+        0.082,
+        20,
+        10
+      ),
+      hairMat
+    );
+    tailPivot.add(mainStrand, curlStrand);
+    return tailPivot;
+  };
+  const leftTwinTail = buildTwinTail(-1);
+  const rightTwinTail = buildTwinTail(1);
+  headGroup.add(leftTwinTail, rightTwinTail);
+
+  // ================= 5. DEEP 3D PIXAR/ANIME EYES, LASHES, BROWS & EXPRESSIVE MOUTHS =================
+  const buildPixarEye = (side: -1 | 1) => {
+    const eyeRoot = new THREE.Group();
+    eyeRoot.position.set(side * 0.168, -0.02, 0.345);
+    eyeRoot.rotation.y = side * 0.2;
+
+    // 3D Curved Eyeball mapped with 512x512 Pixar Iris + Corneal Clearcoat
+    const irisDome = new THREE.Mesh(
+      new THREE.SphereGeometry(0.098, 24, 20, 0, Math.PI * 2, 0, Math.PI * 0.55),
+      eyeIrisMat
+    );
+    irisDome.rotation.x = Math.PI * 0.5;
+    irisDome.scale.set(0.94, 1.0, 0.52);
+    eyeRoot.add(irisDome);
+
+    // Sculpted Curved 3D Upper Eyelash Wing!
+    const lashCurve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(-side * 0.082, 0.042, 0.038),
+      new THREE.Vector3(0, 0.092, 0.048),
+      new THREE.Vector3(side * 0.092, 0.052, 0.036),
+      new THREE.Vector3(side * 0.115, 0.068, 0.02),
+    ]);
+    const upperLash = new THREE.Mesh(new THREE.TubeGeometry(lashCurve, 14, 0.015, 8, false), lashMat);
+    eyeRoot.add(upperLash);
+
+    return { eyeRoot, irisDome };
   };
 
-  const leftEyeBuilt = buildEye(-1);
-  const rightEyeBuilt = buildEye(1);
-  headGroup.add(leftEyeBuilt.eyeRoot, rightEyeBuilt.eyeRoot);
+  const leftEyeBuilt = buildPixarEye(-1);
+  const rightEyeBuilt = buildPixarEye(1);
+  const leftEyeOpen = leftEyeBuilt.eyeRoot;
+  const rightEyeOpen = rightEyeBuilt.eyeRoot;
+  const leftIrisMesh = leftEyeBuilt.irisDome;
+  const rightIrisMesh = rightEyeBuilt.irisDome;
+  headGroup.add(leftEyeOpen, rightEyeOpen);
 
-  // Happy curved ^ ^ eye crescents (shown during match cheers & victory!)
-  const happyArcGeo = new THREE.TorusGeometry(0.075, 0.018, 8, 16, Math.PI);
-  const leftHappyArc = new THREE.Mesh(happyArcGeo, darkFeatureMat);
-  leftHappyArc.position.set(-0.155, -0.02, 0.41);
-  leftHappyArc.rotation.y = -0.24;
-  leftHappyArc.visible = false;
+  // 3D Blinking Eyelids
+  const makeEyelid = (side: -1 | 1) => {
+    const lid = new THREE.Mesh(
+      new THREE.SphereGeometry(0.102, 16, 12, 0, Math.PI * 2, 0, Math.PI * 0.52),
+      skinMat
+    );
+    lid.rotation.x = Math.PI * 0.5;
+    lid.scale.set(0.98, 0.55, 1.05);
+    lid.position.set(side * 0.168, -0.02, 0.348);
+    lid.rotation.y = side * 0.2;
+    lid.visible = false;
+    return lid;
+  };
+  const leftEyelid = makeEyelid(-1);
+  const rightEyelid = makeEyelid(1);
+  headGroup.add(leftEyelid, rightEyelid);
 
-  const rightHappyArc = new THREE.Mesh(happyArcGeo, darkFeatureMat);
-  rightHappyArc.position.set(0.155, -0.02, 0.41);
-  rightHappyArc.rotation.y = 0.24;
-  rightHappyArc.visible = false;
+  // Happy Crescent Eye Arcs (^ ^)
+  const makeHappyArc = (side: -1 | 1) => {
+    const arc = new THREE.Mesh(
+      new THREE.TorusGeometry(0.072, 0.015, 8, 18, Math.PI * 0.88),
+      lashMat
+    );
+    arc.position.set(side * 0.168, -0.03, 0.388);
+    arc.rotation.y = side * 0.2;
+    arc.rotation.z = Math.PI * 0.06;
+    arc.visible = false;
+    return arc;
+  };
+  const leftHappyArc = makeHappyArc(-1);
+  const rightHappyArc = makeHappyArc(1);
   headGroup.add(leftHappyArc, rightHappyArc);
 
-  // Expressive Eyebrows
-  const browGeo = new THREE.CapsuleGeometry(0.015, 0.09, 6, 8);
-  const leftBrow = new THREE.Mesh(browGeo, darkFeatureMat);
-  leftBrow.position.set(-0.155, 0.13, 0.39);
+  // Expressive 3D Eyebrows
+  const browGeo = new THREE.CapsuleGeometry(0.013, 0.095, 6, 10);
+  const leftBrow = new THREE.Mesh(browGeo, hairMat);
   leftBrow.rotation.z = Math.PI * 0.5;
+  leftBrow.position.set(-0.168, 0.125, 0.385);
 
-  const rightBrow = new THREE.Mesh(browGeo, darkFeatureMat);
-  rightBrow.position.set(0.155, 0.13, 0.39);
+  const rightBrow = new THREE.Mesh(browGeo, hairMat);
   rightBrow.rotation.z = Math.PI * 0.5;
+  rightBrow.position.set(0.168, 0.125, 0.385);
   headGroup.add(leftBrow, rightBrow);
 
-  // 3 Mouth states: Smile, Surprised/Scared O, Sad arc
-  const smileGeo = new THREE.TorusGeometry(0.052, 0.014, 8, 16, Math.PI);
-  const mouthSmile = new THREE.Mesh(smileGeo, darkFeatureMat);
-  mouthSmile.position.set(0, -0.095, 0.405);
-  mouthSmile.rotation.z = Math.PI;
+  // Sculpted 3D Open Joyful Smile (Mouth Cavity + Cute Tongue + Upper Teeth!)
+  const mouthSmile = new THREE.Group();
+  mouthSmile.position.set(0, -0.175, 0.382);
+
+  const smileCavity = new THREE.Mesh(
+    new THREE.SphereGeometry(0.056, 14, 12, 0, Math.PI, 0, Math.PI),
+    mouthCavityMat
+  );
+  smileCavity.scale.set(1.25, 0.88, 0.45);
+  smileCavity.rotation.z = Math.PI;
+  mouthSmile.add(smileCavity);
+
+  const smileTongue = new THREE.Mesh(new THREE.SphereGeometry(0.034, 10, 8), tongueMat);
+  smileTongue.scale.set(1.15, 0.65, 0.5);
+  smileTongue.position.set(0, -0.022, 0.012);
+  mouthSmile.add(smileTongue);
+
+  const smileTeeth = new THREE.Mesh(new THREE.BoxGeometry(0.062, 0.014, 0.015), teethMat);
+  smileTeeth.position.set(0, 0.006, 0.018);
+  mouthSmile.add(smileTeeth);
   headGroup.add(mouthSmile);
 
+  // Surprised / Panic 'O' Mouth
   const mouthSurprised = new THREE.Mesh(
-    new THREE.SphereGeometry(0.048, 12, 12),
-    capeMat
+    new THREE.TorusGeometry(0.042, 0.013, 10, 18),
+    mouthCavityMat
   );
-  mouthSurprised.scale.set(0.85, 1.15, 0.35);
-  mouthSurprised.position.set(0, -0.115, 0.405);
+  mouthSurprised.scale.set(0.9, 1.18, 0.7);
+  mouthSurprised.position.set(0, -0.19, 0.386);
   mouthSurprised.visible = false;
   headGroup.add(mouthSurprised);
 
-  const mouthSad = new THREE.Mesh(smileGeo, darkFeatureMat);
-  mouthSad.position.set(0, -0.145, 0.405);
+  // Sad / Worried Mouth Arc
+  const mouthSad = new THREE.Mesh(
+    new THREE.TorusGeometry(0.048, 0.012, 8, 16, Math.PI * 0.85),
+    lashMat
+  );
+  mouthSad.position.set(0, -0.225, 0.386);
+  mouthSad.rotation.z = Math.PI * 0.08;
   mouthSad.visible = false;
   headGroup.add(mouthSad);
 
-  // 3D Sweat Drop (high danger) & Tear Drops (failure)
-  const dropGeo = new THREE.ConeGeometry(0.042, 0.12, 10);
-  const sweatDrop = new THREE.Mesh(dropGeo, waterMat);
-  sweatDrop.position.set(0.36, 0.16, 0.28);
+  // Panic Sweat Drop + Refractive 3D Tears
+  const dropGeo = new THREE.ConeGeometry(0.036, 0.1, 12);
+  const sweatDrop = new THREE.Mesh(dropGeo, tearMat);
+  sweatDrop.position.set(0.34, 0.14, 0.28);
+  sweatDrop.rotation.z = -0.24;
   sweatDrop.visible = false;
   headGroup.add(sweatDrop);
 
-  const tearGeo = new THREE.SphereGeometry(0.036, 10, 10);
-  tearGeo.scale(0.8, 1.3, 0.8);
-  const leftTear = new THREE.Mesh(tearGeo, waterMat);
-  leftTear.position.set(-0.19, -0.09, 0.41);
+  const tearGeo = new THREE.SphereGeometry(0.03, 12, 10);
+  tearGeo.scale(0.85, 1.35, 0.85);
+  const leftTear = new THREE.Mesh(tearGeo, tearMat);
+  leftTear.position.set(-0.22, -0.1, 0.39);
   leftTear.visible = false;
 
-  const rightTear = new THREE.Mesh(tearGeo, waterMat);
-  rightTear.position.set(0.19, -0.09, 0.41);
+  const rightTear = new THREE.Mesh(tearGeo, tearMat);
+  rightTear.position.set(0.22, -0.1, 0.39);
   rightTear.visible = false;
   headGroup.add(leftTear, rightTear);
 
   root.traverse((obj) => {
-    if ((obj as THREE.Mesh).isMesh) {
+    if ((obj as THREE.Mesh).isMesh && obj !== shadow) {
       obj.castShadow = true;
     }
   });
@@ -426,16 +798,24 @@ export function createMochiRig3D(): MochiRig3D {
     leftEar,
     rightEar,
     hairBangs,
-    leftHairLock,
-    rightHairLock,
-    leftArm,
-    rightArm,
-    leftFoot,
-    rightFoot,
-    leftEyeOpen: leftEyeBuilt.eyeRoot,
-    rightEyeOpen: rightEyeBuilt.eyeRoot,
-    leftEyelid: leftEyeBuilt.eyelid,
-    rightEyelid: rightEyeBuilt.eyelid,
+    leftTwinTail,
+    rightTwinTail,
+    leftArm: leftArmRig.shoulderGroup,
+    leftForearm: leftArmRig.forearmGroup,
+    rightArm: rightArmRig.shoulderGroup,
+    rightForearm: rightArmRig.forearmGroup,
+    leftLeg: leftLegRig.hipGroup,
+    leftShin: leftLegRig.shinGroup,
+    rightLeg: rightLegRig.hipGroup,
+    rightShin: rightLegRig.shinGroup,
+    skirtGroup,
+    capeMesh,
+    leftEyeOpen,
+    rightEyeOpen,
+    leftIrisMesh,
+    rightIrisMesh,
+    leftEyelid,
+    rightEyelid,
     leftHappyArc,
     rightHappyArc,
     leftBrow,
@@ -450,137 +830,171 @@ export function createMochiRig3D(): MochiRig3D {
   };
 }
 
-export function updateMochiRigAnimation(rig: MochiRig3D, params: MochiAnimParams) {
-  const { time, danger, status, happyTimer, surprisedTimer } = params;
+export function updateMochiRigAnimation(rig: MochiRig3D, p: MochiAnimParams) {
+  const { time, danger, status, happyTimer, surprisedTimer } = p;
+  const pose = p.poseOverride;
 
-  const isVictory = status === 'rescuing' || status === 'won';
+  const isVictory =
+    pose === 'victory' || status === 'won' || status === 'rescuing' || happyTimer > 0;
   const isLost = status === 'lost';
-  const isHappy = isVictory || (happyTimer > 0 && danger < 82 && !isLost);
-  const isScared = !isVictory && !isLost && (danger >= 62 || surprisedTimer > 0);
+  const isRunning = pose === 'run' || Boolean(p.isMoving) || status === 'rescuing';
+  const isPanicked =
+    pose === 'panic' || (!isVictory && (danger >= 58 || surprisedTimer > 0 || isLost));
+  const isWorried = !isVictory && !isPanicked && danger >= 32;
 
-  // 1. Body breathing, jumping, or trembling
-  let jumpY = 0;
-  let breathScaleY = 1 + Math.sin(time * 3.2) * 0.025;
-  let breathScaleXZ = 1 - Math.sin(time * 3.2) * 0.015;
-  let shakeX = 0;
-  let spinY = 0;
+  // Periodic natural blink every 3.4s
+  const blinkCycle = time % 3.4;
+  const isBlinking = !isVictory && !isPanicked && blinkCycle > 3.24;
+
+  // 1. Body Bounce, Tremble & Run Stride
+  let bounceY = Math.sin(time * 3.1) * 0.032;
+  let shiverX = 0;
+  let leanX = 0;
 
   if (isVictory) {
-    jumpY = Math.abs(Math.sin(time * 8.5)) * 0.38;
-    spinY = Math.sin(time * 3.5) * 0.45;
-    breathScaleY = 1.04;
-  } else if (isHappy) {
-    jumpY = Math.abs(Math.sin(time * 10)) * 0.16;
-  } else if (isLost) {
-    jumpY = -0.08;
-    breathScaleY = 0.94 + Math.sin(time * 6) * 0.02;
-  } else if (danger >= 72) {
-    jumpY = Math.abs(Math.sin(time * 12)) * 0.09;
-    shakeX = Math.sin(time * 36) * 0.032;
-  } else if (danger >= 45) {
-    shakeX = Math.sin(time * 22) * 0.014;
+    bounceY = Math.abs(Math.sin(time * 7.8)) * 0.14;
+  } else if (isRunning) {
+    bounceY = Math.abs(Math.sin(time * 13.0)) * 0.09;
+    leanX = 0.14;
+  } else if (isPanicked) {
+    const tremor = Math.min(1, (Math.max(60, danger) - 50) / 50);
+    shiverX = Math.sin(time * 42) * 0.026 * tremor;
+    bounceY = Math.sin(time * 9.5) * 0.022;
   }
 
-  rig.bodyPivot.position.set(shakeX, jumpY, 0);
-  rig.bodyPivot.rotation.y = spinY;
-  rig.bodyPivot.scale.set(breathScaleXZ, breathScaleY, breathScaleXZ);
+  rig.bodyPivot.position.set(shiverX, bounceY, 0);
+  rig.bodyPivot.rotation.x = leanX;
+  rig.shadow.scale.setScalar(1 - Math.max(0, bounceY) * 1.15);
 
-  const shadowScale = Math.max(0.55, 1 - jumpY * 0.7);
-  rig.shadow.scale.setScalar(shadowScale);
-
-  // 2. Subtle head tilt & natural hair sway
-  if (isLost) {
-    rig.headGroup.rotation.x = 0.25;
-    rig.headGroup.rotation.z = Math.sin(time * 4) * 0.06;
-  } else if (isScared) {
+  // 2. Head Tilt & Glance Toward Hazard When Panicked
+  if (isVictory) {
+    rig.headGroup.rotation.z = Math.sin(time * 5.8) * 0.11;
+    rig.headGroup.rotation.y = Math.sin(time * 3.2) * 0.16;
     rig.headGroup.rotation.x = -0.06;
-    rig.headGroup.rotation.y = Math.sin(time * 5.5) * 0.22;
-    rig.headGroup.rotation.z = Math.sin(time * 9) * 0.06;
+  } else if (isPanicked) {
+    rig.headGroup.rotation.z = Math.sin(time * 16) * 0.065;
+    rig.headGroup.rotation.y = Math.sin(time * 4.2) * 0.24;
+    rig.headGroup.rotation.x = 0.06;
   } else {
-    rig.headGroup.rotation.x = Math.sin(time * 2.1) * 0.04;
-    rig.headGroup.rotation.y = Math.sin(time * 1.5) * 0.12;
-    rig.headGroup.rotation.z = Math.sin(time * 2.4) * 0.065;
+    rig.headGroup.rotation.z = Math.sin(time * 2.1) * 0.045;
+    rig.headGroup.rotation.y = Math.sin(time * 1.4) * 0.1;
+    rig.headGroup.rotation.x = Math.sin(time * 1.8) * 0.03;
   }
 
-  const hairSway = Math.sin(time * 3.6) * 0.09;
-  rig.leftHairLock.rotation.z = 0.16 + hairSway;
-  rig.rightHairLock.rotation.z = -0.16 + hairSway;
-  rig.hairBangs.rotation.x = Math.sin(time * 3.2) * 0.04;
+  // 3. Hair Buns & Flowing Silk Twin-Tail Physics!
+  const bunDroop = isPanicked || isLost ? 0.18 : isWorried ? 0.08 : 0;
+  rig.leftEar.rotation.z = 0.32 + bunDroop + Math.sin(time * 4.2) * 0.05;
+  rig.rightEar.rotation.z = -0.32 - bunDroop - Math.sin(time * 4.2) * 0.05;
 
-  // Ear perk / droop
-  const earFlop = isLost ? 0.35 : isScared ? 0.18 : -0.05 + Math.sin(time * 3.8) * 0.06;
-  rig.leftEar.rotation.z = 0.24 + earFlop;
-  rig.rightEar.rotation.z = -0.24 - earFlop;
+  const tailSwing = isRunning ? Math.sin(time * 13) * 0.28 : Math.sin(time * 3.4) * 0.11;
+  const tailFlare = isVictory ? 0.24 + Math.abs(Math.sin(time * 7.8)) * 0.18 : 0.08;
+  rig.leftTwinTail.rotation.z = -tailFlare + tailSwing * 0.5;
+  rig.rightTwinTail.rotation.z = tailFlare + tailSwing * 0.5;
+  rig.leftTwinTail.rotation.x = isRunning ? 0.32 : Math.sin(time * 2.8) * 0.08;
+  rig.rightTwinTail.rotation.x = isRunning ? 0.32 : Math.cos(time * 2.8) * 0.08;
 
-  // 3. Arm gestures
-  if (isVictory || isHappy) {
-    rig.leftArm.rotation.z = -1.85 + Math.sin(time * 13) * 0.35;
-    rig.rightArm.rotation.z = 1.85 - Math.sin(time * 13) * 0.35;
-  } else if (isScared) {
-    // Hands raised near cheeks in panic!
-    rig.leftArm.rotation.z = -1.35 + Math.sin(time * 16) * 0.22;
-    rig.rightArm.rotation.z = 1.35 - Math.sin(time * 16) * 0.22;
-  } else if (isLost) {
-    rig.leftArm.rotation.z = -0.2;
-    rig.rightArm.rotation.z = 0.2;
+  // 4. Two-Joint Articulated Arm Poses (Hands to cheeks in panic, Cheer on victory, Pump on run!)
+  if (isVictory) {
+    rig.leftArm.rotation.set(-0.35, 0, -2.15 + Math.sin(time * 10) * 0.25);
+    rig.leftForearm.rotation.set(-0.35, 0, -0.3);
+    rig.rightArm.rotation.set(-0.35, 0, 2.15 - Math.sin(time * 10) * 0.25);
+    rig.rightForearm.rotation.set(-0.35, 0, 0.3);
+  } else if (isRunning) {
+    const swing = Math.sin(time * 13) * 0.85;
+    rig.leftArm.rotation.set(swing, 0, -0.25);
+    rig.leftForearm.rotation.set(-0.85, 0, 0);
+    rig.rightArm.rotation.set(-swing, 0, 0.25);
+    rig.rightForearm.rotation.set(-0.85, 0, 0);
+  } else if (isPanicked) {
+    // Hands raised adorably toward cheeks in survival panic!
+    const trem = Math.sin(time * 28) * 0.08;
+    rig.leftArm.rotation.set(-1.15, 0.35, -0.55 + trem);
+    rig.leftForearm.rotation.set(-1.25, 0, 0.55);
+    rig.rightArm.rotation.set(-1.15, -0.35, 0.55 - trem);
+    rig.rightForearm.rotation.set(-1.25, 0, -0.55);
   } else {
-    rig.leftArm.rotation.z = -0.25 + Math.sin(time * 3.2) * 0.16;
-    rig.rightArm.rotation.z = 0.35 + Math.cos(time * 3.2) * 0.22;
+    rig.leftArm.rotation.set(Math.sin(time * 2.4) * 0.08, 0, -0.18 - Math.sin(time * 2.6) * 0.06);
+    rig.leftForearm.rotation.set(-0.28, 0, 0.1);
+    rig.rightArm.rotation.set(-Math.sin(time * 2.4) * 0.08, 0, 0.18 + Math.sin(time * 2.6) * 0.06);
+    rig.rightForearm.rotation.set(-0.28, 0, -0.1);
   }
 
-  // Foot tapping
-  rig.leftFoot.rotation.x = isVictory ? Math.sin(time * 12) * 0.35 : 0;
-  rig.rightFoot.rotation.x = isVictory ? -Math.sin(time * 12) * 0.35 : 0;
-
-  // 4. Natural Blinking & Facial Expressions!
-  const blinkCycle = time % 3.4;
-  const isBlinking = blinkCycle > 3.22;
-
-  if (isHappy) {
-    rig.leftEyeOpen.visible = false;
-    rig.rightEyeOpen.visible = false;
-    rig.leftHappyArc.visible = true;
-    rig.rightHappyArc.visible = true;
+  // 5. Articulated Legs, Knees & Skirt Sway
+  if (isRunning) {
+    const stride = Math.sin(time * 13) * 0.72;
+    rig.leftLeg.rotation.set(stride, 0, 0);
+    rig.leftShin.rotation.set(Math.max(0, -stride * 0.85), 0, 0);
+    rig.rightLeg.rotation.set(-stride, 0, 0);
+    rig.rightShin.rotation.set(Math.max(0, stride * 0.85), 0, 0);
+  } else if (isVictory) {
+    const kick = Math.sin(time * 7.8) * 0.32;
+    rig.leftLeg.rotation.set(kick, 0, -0.06);
+    rig.leftShin.rotation.set(0.25, 0, 0);
+    rig.rightLeg.rotation.set(-kick, 0, 0.06);
+    rig.rightShin.rotation.set(0.25, 0, 0);
+  } else if (isPanicked) {
+    // Pigeon-toed trembling knees!
+    rig.leftLeg.rotation.set(0.08, 0.15, 0.06);
+    rig.leftShin.rotation.set(0.12, 0, 0);
+    rig.rightLeg.rotation.set(0.08, -0.15, -0.06);
+    rig.rightShin.rotation.set(0.12, 0, 0);
   } else {
-    rig.leftEyeOpen.visible = true;
-    rig.rightEyeOpen.visible = true;
-    rig.leftHappyArc.visible = false;
-    rig.rightHappyArc.visible = false;
-
-    const lidRot = isBlinking ? -0.05 : isLost ? -0.55 : -1.35;
-    rig.leftEyelid.rotation.x = lidRot;
-    rig.rightEyelid.rotation.x = lidRot;
-
-    const eyeScale = isScared ? 1.12 : 1.0;
-    rig.leftEyeOpen.scale.setScalar(eyeScale);
-    rig.rightEyeOpen.scale.setScalar(eyeScale);
+    rig.leftLeg.rotation.set(0, 0, -0.03);
+    rig.leftShin.rotation.set(0, 0, 0);
+    rig.rightLeg.rotation.set(0, 0, 0.03);
+    rig.rightShin.rotation.set(0, 0, 0);
   }
 
-  // Eyebrows
-  if (isScared || isLost) {
+  rig.skirtGroup.rotation.z = Math.sin(time * 3.2) * 0.04;
+  rig.capeMesh.rotation.x = isRunning ? 0.28 + Math.sin(time * 13) * 0.08 : 0.06 + Math.sin(time * 2.8) * 0.04;
+
+  // 6. Facial Expressions (Pixar Eyes, Pupil Tremor, Brows, Mouths, Sweat & Tears)
+  rig.leftHappyArc.visible = isVictory;
+  rig.rightHappyArc.visible = isVictory;
+  rig.leftEyelid.visible = !isVictory && isBlinking;
+  rig.rightEyelid.visible = !isVictory && isBlinking;
+  rig.leftEyeOpen.visible = !isVictory && !isBlinking;
+  rig.rightEyeOpen.visible = !isVictory && !isBlinking;
+
+  // Subtle iris shrink/tremble when monster is dangerously close!
+  const eyeScale = isPanicked ? 0.92 + Math.sin(time * 35) * 0.03 : 1.0;
+  rig.leftIrisMesh.scale.set(0.94 * eyeScale, 1.0 * eyeScale, 0.52);
+  rig.rightIrisMesh.scale.set(0.94 * eyeScale, 1.0 * eyeScale, 0.52);
+
+  if (isPanicked || isWorried) {
     rig.leftBrow.rotation.z = Math.PI * 0.5 - 0.34;
     rig.rightBrow.rotation.z = Math.PI * 0.5 + 0.34;
+    rig.leftBrow.position.y = 0.145;
+    rig.rightBrow.position.y = 0.145;
   } else {
-    rig.leftBrow.rotation.z = Math.PI * 0.5 + 0.06;
-    rig.rightBrow.rotation.z = Math.PI * 0.5 - 0.06;
+    rig.leftBrow.rotation.z = Math.PI * 0.5 + 0.08;
+    rig.rightBrow.rotation.z = Math.PI * 0.5 - 0.08;
+    rig.leftBrow.position.y = 0.125;
+    rig.rightBrow.position.y = 0.125;
   }
 
-  // Mouths
-  rig.mouthSmile.visible = !isScared && !isLost;
-  rig.mouthSurprised.visible = isScared && !isLost;
-  rig.mouthSad.visible = isLost;
+  rig.mouthSmile.visible = isVictory || (!isWorried && !isPanicked && !isLost);
+  rig.mouthSurprised.visible = isPanicked && !isLost;
+  rig.mouthSad.visible = isWorried || isLost;
+  if (rig.mouthSurprised.visible) {
+    rig.mouthSurprised.scale.set(
+      0.9 + Math.sin(time * 18) * 0.12,
+      1.18 + Math.cos(time * 18) * 0.15,
+      0.7
+    );
+  }
 
-  // Sweat & Tears
-  rig.sweatDrop.visible = isScared && danger >= 60;
+  rig.sweatDrop.visible = (danger >= 45 || isPanicked) && !isVictory;
   if (rig.sweatDrop.visible) {
-    rig.sweatDrop.position.y = 0.22 - ((time * 0.55) % 0.28);
+    rig.sweatDrop.position.y = 0.16 - ((time * 0.38) % 0.18);
   }
 
-  rig.leftTear.visible = isLost;
-  rig.rightTear.visible = isLost;
-  if (isLost) {
-    const tearFall = (time * 0.45) % 0.18;
-    rig.leftTear.position.y = -0.08 - tearFall;
-    rig.rightTear.position.y = -0.08 - ((tearFall + 0.09) % 0.18);
+  const showTears = (danger >= 72 || isLost || pose === 'panic') && !isVictory;
+  rig.leftTear.visible = showTears;
+  rig.rightTear.visible = showTears;
+  if (showTears) {
+    const tearFall = (time * 0.32) % 0.14;
+    rig.leftTear.position.y = -0.09 - tearFall;
+    rig.rightTear.position.y = -0.09 - ((tearFall + 0.07) % 0.14);
   }
 }
