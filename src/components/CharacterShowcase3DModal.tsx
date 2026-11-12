@@ -1,9 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
-import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
-import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
-import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
-import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { Language } from '../types/game';
 import { createCandyStudioEnvironment, setupCinematicLights } from '../three/studioEnv';
 import { createMochiRig3D, updateMochiRigAnimation } from '../three/mochiCharacter3D';
@@ -83,33 +79,28 @@ export const CharacterShowcase3DModal: React.FC<CharacterShowcase3DModalProps> =
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.12;
+    renderer.toneMapping = THREE.NeutralToneMapping;
+    renderer.toneMappingExposure = 1.04;
 
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color('#0d1429');
+    scene.background = new THREE.Color('#1e3a8a');
     const envTex = createCandyStudioEnvironment(renderer);
     scene.environment = envTex;
 
     const camera = new THREE.PerspectiveCamera(34, 420 / 340, 0.3, 40);
     setupCinematicLights(scene);
 
-    const composer = new EffectComposer(renderer);
-    composer.addPass(new RenderPass(scene, camera));
-    composer.addPass(new UnrealBloomPass(new THREE.Vector2(420, 340), 0.3, 0.5, 0.88));
-    composer.addPass(new OutputPass());
-
-    // Luxury Turntable Pedestal
+    // Vibrant Royal-Turquoise & 24K Gold Turntable Pedestal (Zero bloom haze!)
     const turntable = new THREE.Group();
     scene.add(turntable);
 
     const baseDisc = new THREE.Mesh(
-      new THREE.CylinderGeometry(1.42, 1.58, 0.16, 48),
+      new THREE.CylinderGeometry(1.42, 1.58, 0.18, 48),
       new THREE.MeshPhysicalMaterial({
-        color: 0x1e293b,
-        roughness: 0.18,
-        metalness: 0.55,
-        clearcoat: 1.0,
+        color: 0x00bbf9,
+        roughness: 0.2,
+        metalness: 0.15,
+        clearcoat: 0.9,
       })
     );
     baseDisc.receiveShadow = true;
@@ -117,17 +108,16 @@ export const CharacterShowcase3DModal: React.FC<CharacterShowcase3DModalProps> =
     turntable.add(baseDisc);
 
     const goldTrim = new THREE.Mesh(
-      new THREE.TorusGeometry(1.45, 0.035, 12, 48),
+      new THREE.TorusGeometry(1.45, 0.045, 12, 48),
       new THREE.MeshPhysicalMaterial({
-        color: 0xffd447,
-        emissive: 0x5c3800,
-        roughness: 0.12,
-        metalness: 0.92,
+        color: 0xffcc00,
+        roughness: 0.14,
+        metalness: 0.88,
         clearcoat: 1.0,
       })
     );
     goldTrim.rotation.x = Math.PI * 0.5;
-    goldTrim.position.y = -0.85;
+    goldTrim.position.y = -0.84;
     turntable.add(goldTrim);
 
     // Instantiate all studio 3D rigs once inside turntable
@@ -175,7 +165,6 @@ export const CharacterShowcase3DModal: React.FC<CharacterShowcase3DModalProps> =
         canvas.height !== Math.floor(h * renderer.getPixelRatio())
       ) {
         renderer.setSize(w, h, false);
-        composer.setSize(w, h);
         camera.aspect = w / h;
         camera.updateProjectionMatrix();
       }
@@ -223,18 +212,17 @@ export const CharacterShowcase3DModal: React.FC<CharacterShowcase3DModalProps> =
       } else if (cur === 'magma_golem') {
         updateMagmaGolemAnimation(magmaGolem, t, isFrz);
       } else if (cur === 'juggernaut') {
-        juggernaut.armorMat.color.setHex(isFrz ? 0x38bdf8 : 0xbe123c);
+        juggernaut.armorMat.color.setHex(isFrz ? 0x38bdf8 : 0xff0a54);
         if (!isFrz) juggernaut.wheelBody.rotation.z -= dt * 3.8;
       }
 
-      composer.render();
+      renderer.render(scene, camera);
       animId = requestAnimationFrame(loop);
     };
 
     animId = requestAnimationFrame(loop);
     return () => {
       cancelAnimationFrame(animId);
-      composer.dispose();
       envTex.dispose();
       renderer.dispose();
     };

@@ -11,7 +11,7 @@
     overflow: hidden;
     touch-action: none;
     font-family: 'Baloo Da 2', 'Fredoka', system-ui, -apple-system, sans-serif;
-    background: radial-gradient(circle at 50% 18%, #2a1f5c 0%, #151c3b 52%, #090d1f 100%);
+    background: radial-gradient(circle at 50% 18%, #2563eb 0%, #1d4ed8 46%, #1e1b4b 100%);
   }
 }
 
@@ -20,61 +20,58 @@
 }
 
 .candy-text-shadow {
-  text-shadow:
-    0 3px 0 rgba(18, 8, 40, 0.78),
-    0 6px 14px rgba(0, 0, 0, 0.55);
+  text-shadow: 0 2.5px 0 rgba(15, 23, 42, 0.85);
 }
 
-/* Premium Royal 3D Gold-Trimmed Panel */
-.royal-panel-3d {
-  background: linear-gradient(180deg, #2b3c73 0%, #1a2752 55%, #111938 100%);
-  border: 3px solid #ffd15c;
+/* Vibrant Royal Cobalt & 24K Gold 3D Panel (Zero blurred neon glow) */
+.royal-panel-3d,
+.royal-modal-panel {
+  background: linear-gradient(180deg, #1d4ed8 0%, #1e3a8a 58%, #172554 100%);
+  border: 3px solid #ffcc00;
   box-shadow:
-    0 8px 0 #7a4606,
-    0 16px 36px rgba(5, 8, 22, 0.72),
-    inset 0 3px 2px rgba(255, 255, 255, 0.35),
-    inset 0 -4px 8px rgba(8, 12, 30, 0.65);
+    0 8px 0 #92400e,
+    0 16px 32px rgba(15, 23, 42, 0.65),
+    inset 0 3px 0 rgba(255, 255, 255, 0.32);
 }
 
 .royal-hud-bar {
-  background: linear-gradient(180deg, #293b70 0%, #17234a 100%);
-  border: 2.5px solid #ffc947;
+  background: linear-gradient(180deg, #2563eb 0%, #1e3a8a 100%);
+  border: 2.5px solid #ffcc00;
   box-shadow:
-    0 5px 0 #6e3d05,
-    0 10px 24px rgba(0, 0, 0, 0.55),
-    inset 0 2px 1px rgba(255, 255, 255, 0.35);
+    0 4px 0 #92400e,
+    0 8px 16px rgba(15, 23, 42, 0.5),
+    inset 0 2px 0 rgba(255, 255, 255, 0.32);
 }
 
-/* Tactile 3D Pillow Buttons */
+/* Tactile Crisp 3D Buttons (No blurred neon outer glow) */
 .candy-btn-green {
   position: relative;
-  background: linear-gradient(180deg, #74ff52 0%, #27d419 50%, #138f08 100%);
+  background: linear-gradient(180deg, #38ef7d 0%, #00d936 52%, #059669 100%);
   box-shadow:
-    0 6px 0 #0b5903,
-    0 10px 24px rgba(39, 212, 25, 0.48),
-    inset 0 3px 2px rgba(255, 255, 255, 0.75);
-  border: 2.5px solid #b8ff9e;
+    0 6px 0 #065f46,
+    0 10px 18px rgba(15, 23, 42, 0.45),
+    inset 0 3px 0 rgba(255, 255, 255, 0.65);
+  border: 2.5px solid #bbf7d0;
   transition: transform 0.14s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.14s ease;
 }
 .candy-btn-green:hover {
-  filter: brightness(1.07);
+  filter: brightness(1.06);
   transform: translateY(-1px);
 }
 .candy-btn-green:active {
   transform: translateY(4px) scale(0.97);
   box-shadow:
-    0 2px 0 #0b5903,
-    0 4px 12px rgba(39, 212, 25, 0.35),
-    inset 0 2px 2px rgba(255, 255, 255, 0.55);
+    0 2px 0 #065f46,
+    inset 0 2px 0 rgba(255, 255, 255, 0.5);
 }
 
 .candy-btn-orange {
-  background: linear-gradient(180deg, #ffd25a 0%, #ff8814 52%, #c94e02 100%);
+  background: linear-gradient(180deg, #ffbe0b 0%, #fb5607 54%, #c2410c 100%);
   box-shadow:
-    0 6px 0 #7a2c00,
-    0 10px 22px rgba(255, 136, 20, 0.42),
-    inset 0 3px 2px rgba(255, 255, 255, 0.72);
-  border: 2.5px solid #ffe79e;
+    0 6px 0 #7c2d12,
+    0 10px 18px rgba(15, 23, 42, 0.45),
+    inset 0 3px 0 rgba(255, 255, 255, 0.65);
+  border: 2.5px solid #fde68a;
   transition: transform 0.14s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.14s ease;
 }
 .candy-btn-orange:hover {

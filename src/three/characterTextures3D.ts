@@ -26,8 +26,8 @@ function createCanvas(w: number, h: number): [HTMLCanvasElement, CanvasRendering
 }
 
 /**
- * 512x512 Multi-layered Pixar/Anime Iris Texture with limbal ring, radial fibers,
- * subsurface lower crescent glow, deep velvet pupil, and dual softbox catchlights.
+ * 512x512 Vivid Electric Sapphire-Turquoise Pixar Iris Texture!
+ * Creates striking complementary contrast against Mochi's warm peach skin & coral-berry hair.
  */
 function buildMochiIrisTexture(): THREE.CanvasTexture {
   const S = 512;
@@ -35,23 +35,23 @@ function buildMochiIrisTexture(): THREE.CanvasTexture {
   const cx = S / 2;
   const cy = S / 2;
 
-  // Sclera soft porcelain-white outer margin
+  // Pure crisp white sclera
   const scleraGrad = ctx.createRadialGradient(cx, cy, S * 0.34, cx, cy, S * 0.5);
   scleraGrad.addColorStop(0, '#ffffff');
-  scleraGrad.addColorStop(0.82, '#f8f0f5');
-  scleraGrad.addColorStop(1, '#e6cfd9');
+  scleraGrad.addColorStop(0.86, '#f8fbff');
+  scleraGrad.addColorStop(1, '#dbeafe');
   ctx.fillStyle = scleraGrad;
   ctx.fillRect(0, 0, S, S);
 
   const irisR = S * 0.35;
 
-  // Outer dark limbal ring
+  // Vivid Cobalt-Sapphire to Electric Cyan Iris!
   const limbal = ctx.createRadialGradient(cx, cy, irisR * 0.1, cx, cy, irisR);
-  limbal.addColorStop(0, '#2a0826');
-  limbal.addColorStop(0.45, '#7b1fa2');
-  limbal.addColorStop(0.78, '#c2185b');
-  limbal.addColorStop(0.92, '#4a0e35');
-  limbal.addColorStop(1, '#1d0517');
+  limbal.addColorStop(0, '#0a1128');
+  limbal.addColorStop(0.42, '#0077b6');
+  limbal.addColorStop(0.76, '#00b4d8');
+  limbal.addColorStop(0.91, '#023e8a');
+  limbal.addColorStop(1, '#03045e');
   ctx.save();
   ctx.beginPath();
   ctx.arc(cx, cy, irisR, 0, Math.PI * 2);
@@ -59,61 +59,49 @@ function buildMochiIrisTexture(): THREE.CanvasTexture {
   ctx.fillStyle = limbal;
   ctx.fillRect(0, 0, S, S);
 
-  // Lower warm rose-gold subsurface bounce crescent
-  const lowerGlow = ctx.createRadialGradient(cx, cy + irisR * 0.42, 4, cx, cy + irisR * 0.35, irisR * 0.72);
-  lowerGlow.addColorStop(0, 'rgba(255, 179, 217, 0.92)');
-  lowerGlow.addColorStop(0.45, 'rgba(255, 92, 168, 0.55)');
-  lowerGlow.addColorStop(1, 'rgba(255, 92, 168, 0)');
+  // Bright Aqua-Mint lower crescent pop
+  const lowerGlow = ctx.createRadialGradient(cx, cy + irisR * 0.4, 4, cx, cy + irisR * 0.35, irisR * 0.72);
+  lowerGlow.addColorStop(0, 'rgba(114, 239, 221, 0.95)');
+  lowerGlow.addColorStop(0.5, 'rgba(0, 245, 212, 0.55)');
+  lowerGlow.addColorStop(1, 'rgba(0, 187, 249, 0)');
   ctx.fillStyle = lowerGlow;
   ctx.fillRect(0, 0, S, S);
 
-  // Upper eyelid shadow gradient inside iris
-  const upperShade = ctx.createLinearGradient(0, cy - irisR, 0, cy + irisR * 0.15);
-  upperShade.addColorStop(0, 'rgba(20, 4, 28, 0.78)');
-  upperShade.addColorStop(0.55, 'rgba(42, 8, 45, 0.25)');
-  upperShade.addColorStop(1, 'rgba(42, 8, 45, 0)');
+  // Upper eyelid crisp shade
+  const upperShade = ctx.createLinearGradient(0, cy - irisR, 0, cy + irisR * 0.1);
+  upperShade.addColorStop(0, 'rgba(3, 4, 94, 0.82)');
+  upperShade.addColorStop(0.55, 'rgba(2, 62, 138, 0.28)');
+  upperShade.addColorStop(1, 'rgba(2, 62, 138, 0)');
   ctx.fillStyle = upperShade;
   ctx.fillRect(0, 0, S, S);
 
-  // Radial crystalline iris fibers
-  ctx.strokeStyle = 'rgba(255, 214, 238, 0.26)';
-  ctx.lineWidth = 2.2;
+  // Crisp turquoise-gold radial iris fibers
+  ctx.strokeStyle = 'rgba(144, 224, 239, 0.42)';
+  ctx.lineWidth = 2.4;
   for (let i = 0; i < 84; i++) {
     const ang = (i / 84) * Math.PI * 2;
-    const r0 = irisR * (0.34 + (i % 3) * 0.04);
-    const r1 = irisR * (0.86 - (i % 4) * 0.03);
+    const r0 = irisR * (0.35 + (i % 3) * 0.04);
+    const r1 = irisR * (0.87 - (i % 4) * 0.03);
     ctx.beginPath();
     ctx.moveTo(cx + Math.cos(ang) * r0, cy + Math.sin(ang) * r0);
     ctx.lineTo(cx + Math.cos(ang) * r1, cy + Math.sin(ang) * r1);
     ctx.stroke();
   }
 
-  // Deep velvet pupil
-  const pupilGrad = ctx.createRadialGradient(cx, cy - 4, 2, cx, cy, irisR * 0.4);
-  pupilGrad.addColorStop(0, '#09020d');
-  pupilGrad.addColorStop(0.78, '#1a0522');
-  pupilGrad.addColorStop(1, 'rgba(26, 5, 34, 0)');
-  ctx.fillStyle = pupilGrad;
+  // Deep ink pupil
+  ctx.fillStyle = '#050816';
   ctx.beginPath();
-  ctx.arc(cx, cy, irisR * 0.4, 0, Math.PI * 2);
+  ctx.arc(cx, cy, irisR * 0.39, 0, Math.PI * 2);
   ctx.fill();
 
-  // Primary softbox specular highlight (upper-left)
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.97)';
+  // Razor-sharp studio catchlights
+  ctx.fillStyle = '#ffffff';
   ctx.beginPath();
   ctx.ellipse(cx - irisR * 0.34, cy - irisR * 0.34, irisR * 0.22, irisR * 0.17, -0.45, 0, Math.PI * 2);
   ctx.fill();
 
-  // Secondary rim highlight (lower-right)
-  ctx.fillStyle = 'rgba(255, 240, 250, 0.88)';
   ctx.beginPath();
   ctx.arc(cx + irisR * 0.36, cy + irisR * 0.34, irisR * 0.1, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Tiny starlight sparkle
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-  ctx.beginPath();
-  ctx.arc(cx - irisR * 0.12, cy - irisR * 0.52, irisR * 0.055, 0, Math.PI * 2);
   ctx.fill();
 
   ctx.restore();
@@ -125,24 +113,23 @@ function buildMochiIrisTexture(): THREE.CanvasTexture {
 }
 
 /**
- * Soft Porcelain-Peach Subsurface Skin Texture with airbrushed rosy cheek blush.
+ * Clean, Bright Creamy-Peach Skin Texture with Vivid Coral-Pink Cheek Blush.
  */
 function buildMochiSkinTexture(): THREE.CanvasTexture {
   const S = 512;
   const [c, ctx] = createCanvas(S, S);
   const baseGrad = ctx.createLinearGradient(0, 0, 0, S);
-  baseGrad.addColorStop(0, '#fff5ec');
-  baseGrad.addColorStop(0.55, '#ffede0');
-  baseGrad.addColorStop(1, '#ffdcc8');
+  baseGrad.addColorStop(0, '#fff0e5');
+  baseGrad.addColorStop(0.55, '#ffe3d1');
+  baseGrad.addColorStop(1, '#ffd2b8');
   ctx.fillStyle = baseGrad;
   ctx.fillRect(0, 0, S, S);
 
-  // Rosy airbrushed blush zones mapped to front-left and front-right cheek UVs
   for (const bx of [S * 0.36, S * 0.64]) {
-    const blush = ctx.createRadialGradient(bx, S * 0.56, 4, bx, S * 0.56, S * 0.11);
-    blush.addColorStop(0, 'rgba(255, 105, 145, 0.52)');
-    blush.addColorStop(0.6, 'rgba(255, 130, 165, 0.22)');
-    blush.addColorStop(1, 'rgba(255, 130, 165, 0)');
+    const blush = ctx.createRadialGradient(bx, S * 0.56, 4, bx, S * 0.56, S * 0.115);
+    blush.addColorStop(0, 'rgba(255, 77, 121, 0.62)');
+    blush.addColorStop(0.6, 'rgba(255, 107, 149, 0.26)');
+    blush.addColorStop(1, 'rgba(255, 107, 149, 0)');
     ctx.fillStyle = blush;
     ctx.fillRect(0, 0, S, S);
   }
@@ -154,33 +141,31 @@ function buildMochiSkinTexture(): THREE.CanvasTexture {
 }
 
 /**
- * Silky Anisotropic Strawberry-Chestnut to Peach-Rose Hair Strand Albedo & Normal Maps.
+ * Vibrant Sunset-Ruby to Warm Tangerine-Coral Silk Hair Texture & Strand Normal Map!
  */
 function buildMochiHairTextures(): { albedo: THREE.CanvasTexture; normal: THREE.CanvasTexture } {
   const S = 512;
   const [c, ctx] = createCanvas(S, S);
   const grad = ctx.createLinearGradient(0, 0, 0, S);
-  grad.addColorStop(0, '#591c33');
-  grad.addColorStop(0.28, '#9e2b52');
-  grad.addColorStop(0.68, '#e0537c');
-  grad.addColorStop(1, '#ffb3c6');
+  grad.addColorStop(0, '#a4133c');
+  grad.addColorStop(0.32, '#e01e5a');
+  grad.addColorStop(0.7, '#ff4d6d');
+  grad.addColorStop(1, '#ff9e00'); // Vibrant warm golden-tangerine tips!
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, S, S);
 
-  // Fine vertical silk strands
   for (let x = 0; x < S; x += 2) {
     const lum = Math.sin(x * 0.37) * 0.5 + Math.cos(x * 0.13) * 0.5;
-    ctx.fillStyle = lum > 0 ? `rgba(255,235,242,${0.08 * lum})` : `rgba(35,6,18,${-0.1 * lum})`;
+    ctx.fillStyle = lum > 0 ? `rgba(255,245,235,${0.12 * lum})` : `rgba(89,13,34,${-0.12 * lum})`;
     ctx.fillRect(x, 0, 2, S);
   }
 
-  // Normal map for anisotropic hair strand grooves
   const [nc, nctx] = createCanvas(S, S);
   const img = nctx.createImageData(S, S);
   for (let y = 0; y < S; y++) {
     for (let x = 0; x < S; x++) {
       const dHdx = Math.cos(x * 0.45) * 0.65 + Math.cos(x * 0.17) * 0.35;
-      const nx = -dHdx * 0.55;
+      const nx = -dHdx * 0.5;
       const ny = 0.04 * Math.sin(y * 0.1);
       const nz = Math.sqrt(Math.max(0.1, 1 - nx * nx - ny * ny));
       const idx = (y * S + x) * 4;
@@ -202,26 +187,26 @@ function buildMochiHairTextures(): { albedo: THREE.CanvasTexture; normal: THREE.
 }
 
 /**
- * Royal Velvet & Satin Dress Texture with Golden Filigree Hem Trim (100% secular floral/royal trim).
+ * Eye-Catching Royal Cobalt-Turquoise & Magenta-Gold Embroidered Dress Texture!
+ * Pairing Royal Cyan-Blue skirt with Mochi's Sunset-Coral hair & Sunny Gold trim creates instant color pop!
  */
 function buildMochiDressTexture(): THREE.CanvasTexture {
   const S = 512;
   const [c, ctx] = createCanvas(S, S);
   const grad = ctx.createLinearGradient(0, 0, 0, S);
-  grad.addColorStop(0, '#ff477e');
-  grad.addColorStop(0.65, '#e11d58');
-  grad.addColorStop(0.84, '#b80d44');
-  grad.addColorStop(0.88, '#ffd166');
-  grad.addColorStop(0.93, '#fff1cc');
-  grad.addColorStop(1, '#d90448');
+  grad.addColorStop(0, '#00bbf9');
+  grad.addColorStop(0.58, '#0077b6');
+  grad.addColorStop(0.8, '#023e8a');
+  grad.addColorStop(0.85, '#ffcc00');
+  grad.addColorStop(0.92, '#ffee88');
+  grad.addColorStop(1, '#ff0a54');
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, S, S);
 
-  // Golden scalloped embroidery dots along hem
-  ctx.fillStyle = '#ffe07d';
+  ctx.fillStyle = '#ffd60a';
   for (let x = 16; x < S; x += 32) {
     ctx.beginPath();
-    ctx.arc(x, S * 0.81, 6, 0, Math.PI * 2);
+    ctx.arc(x, S * 0.78, 6.5, 0, Math.PI * 2);
     ctx.fill();
   }
 
@@ -232,41 +217,38 @@ function buildMochiDressTexture(): THREE.CanvasTexture {
 }
 
 /**
- * Blazing Vertical-Slit Reptile Eye Texture.
+ * High-Contrast Vivid Reptile Eye Texture (Crisp painted colors, zero blurry bloom).
  */
-function buildReptileEyeTexture(irisTop: string, irisBot: string, glowHex: string): THREE.CanvasTexture {
+function buildReptileEyeTexture(irisTop: string, irisBot: string, centerHex: string): THREE.CanvasTexture {
   const S = 256;
   const [c, ctx] = createCanvas(S, S);
   const cx = S / 2;
   const cy = S / 2;
 
   const rad = ctx.createRadialGradient(cx, cy, 8, cx, cy, S * 0.5);
-  rad.addColorStop(0, glowHex);
-  rad.addColorStop(0.55, irisTop);
-  rad.addColorStop(0.88, irisBot);
-  rad.addColorStop(1, '#120505');
+  rad.addColorStop(0, centerHex);
+  rad.addColorStop(0.58, irisTop);
+  rad.addColorStop(0.9, irisBot);
+  rad.addColorStop(1, '#0f172a');
   ctx.fillStyle = rad;
   ctx.fillRect(0, 0, S, S);
 
-  // Fiery iris veins
-  ctx.strokeStyle = 'rgba(255,255,210,0.34)';
+  ctx.strokeStyle = 'rgba(255,255,255,0.38)';
   ctx.lineWidth = 2;
-  for (let i = 0; i < 48; i++) {
-    const a = (i / 48) * Math.PI * 2;
+  for (let i = 0; i < 40; i++) {
+    const a = (i / 40) * Math.PI * 2;
     ctx.beginPath();
     ctx.moveTo(cx + Math.cos(a) * 18, cy + Math.sin(a) * 18);
     ctx.lineTo(cx + Math.cos(a) * 112, cy + Math.sin(a) * 112);
     ctx.stroke();
   }
 
-  // Razor vertical viper slit pupil
-  ctx.fillStyle = '#070104';
+  ctx.fillStyle = '#05050a';
   ctx.beginPath();
-  ctx.ellipse(cx + 12, cy, 15, 92, 0, 0, Math.PI * 2);
+  ctx.ellipse(cx + 10, cy, 15, 92, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  // Wet corneal highlight
-  ctx.fillStyle = 'rgba(255,255,255,0.94)';
+  ctx.fillStyle = '#ffffff';
   ctx.beginPath();
   ctx.ellipse(cx - 26, cy - 34, 22, 14, -0.4, 0, Math.PI * 2);
   ctx.fill();
@@ -277,9 +259,7 @@ function buildReptileEyeTexture(irisTop: string, irisBot: string, glowHex: strin
 }
 
 /**
- * Full Circumferential Serpent / Dragon Scale + Ventral Belly Scute Texture!
- * U in [0..1] wraps around body circumference (0.36..0.64 = ventral belly scutes, rest = diamond dorsal scales).
- * V in [0..1] runs along spine length.
+ * Ultra-Vibrant, Eye-Catching Tropical & Fantasy Monster Scale Combinations!
  */
 function buildSerpentBodyTexture(variant: SerpentSkinVariant): THREE.CanvasTexture {
   const W = 512;
@@ -290,37 +270,41 @@ function buildSerpentBodyTexture(variant: SerpentSkinVariant): THREE.CanvasTextu
     SerpentSkinVariant,
     { dorsalA: string; dorsalB: string; ridge: string; crevice: string; bellyA: string; bellyB: string }
   > = {
+    // Electric Emerald-Lime + Hot Crimson Dorsal Diamonds + Sunny Canary-Gold Belly!
     venom_naga: {
-      dorsalA: '#1fb83b',
-      dorsalB: '#0c6e24',
-      ridge: '#a3e635',
-      crevice: '#05290e',
-      bellyA: '#fef08a',
-      bellyB: '#ca8a04',
+      dorsalA: '#00e640',
+      dorsalB: '#00a832',
+      ridge: '#ff1744',
+      crevice: '#064e20',
+      bellyA: '#ffe600',
+      bellyB: '#ff9500',
     },
+    // Tropical Electric Cyan-Teal + Bright Tangerine-Orange Diamonds & Gold Belly!
     river_gharial: {
-      dorsalA: '#0d9488',
-      dorsalB: '#115e59',
-      ridge: '#5eead4',
-      crevice: '#042f2e',
-      bellyA: '#fde68a',
-      bellyB: '#b45309',
+      dorsalA: '#00e5ff',
+      dorsalB: '#0097a7',
+      ridge: '#ff6d00',
+      crevice: '#004d5a',
+      bellyA: '#ffea00',
+      bellyB: '#ff9100',
     },
+    // Vivid Cobalt-Sapphire + Mint-Aqua + Golden-Coral Crest!
     frost_wyrm: {
-      dorsalA: '#38bdf8',
-      dorsalB: '#0369a1',
-      ridge: '#e0f2fe',
-      crevice: '#082f49',
-      bellyA: '#f0f9ff',
-      bellyB: '#7dd3fc',
+      dorsalA: '#00b4ff',
+      dorsalB: '#0062ff',
+      ridge: '#00f5d4',
+      crevice: '#0a2463',
+      bellyA: '#ffffff',
+      bellyB: '#72efdd',
     },
+    // Royal Violet-Purple + Blazing Hot-Magenta & Flame-Gold Belly!
     boss_dragon: {
-      dorsalA: '#7e22ce',
-      dorsalB: '#3b0764',
-      ridge: '#f43f5e',
-      crevice: '#17032b',
-      bellyA: '#fcd34d',
-      bellyB: '#b45309',
+      dorsalA: '#9d4edd',
+      dorsalB: '#5a189a',
+      ridge: '#ff006e',
+      crevice: '#240046',
+      bellyA: '#ffd60a',
+      bellyB: '#ff7b00',
     },
   };
 
@@ -328,7 +312,6 @@ function buildSerpentBodyTexture(variant: SerpentSkinVariant): THREE.CanvasTextu
   ctx.fillStyle = pal.crevice;
   ctx.fillRect(0, 0, W, H);
 
-  // Draw overlapping diamond dorsal scales across full canvas
   const cols = 18;
   const rows = 28;
   const cw = W / cols;
@@ -339,26 +322,25 @@ function buildSerpentBodyTexture(variant: SerpentSkinVariant): THREE.CanvasTextu
       const sx = (col + (r % 2) * 0.5) * cw;
       const sy = r * ch;
 
-      const g = ctx.createRadialGradient(sx, sy - ch * 0.15, 1, sx, sy, cw * 0.65);
-      // Dorsal spine stripe near u = 0 or u = 1
       const uNorm = ((sx / W) % 1 + 1) % 1;
       const distFromSpine = Math.min(uNorm, 1 - uNorm);
-      const isSpine = distFromSpine < 0.11 && r % 2 === 0;
+      const isDiamond = distFromSpine < 0.13 && r % 2 === 0;
 
-      g.addColorStop(0, isSpine ? pal.ridge : pal.dorsalA);
-      g.addColorStop(0.68, pal.dorsalB);
+      const g = ctx.createRadialGradient(sx, sy - ch * 0.15, 1, sx, sy, cw * 0.64);
+      g.addColorStop(0, isDiamond ? pal.ridge : pal.dorsalA);
+      g.addColorStop(0.72, isDiamond ? '#c9184a' : pal.dorsalB);
       g.addColorStop(1, pal.crevice);
 
       ctx.fillStyle = g;
       ctx.beginPath();
-      ctx.moveTo(sx, sy - ch * 0.56);
-      ctx.quadraticCurveTo(sx + cw * 0.56, sy, sx, sy + ch * 0.58);
-      ctx.quadraticCurveTo(sx - cw * 0.56, sy, sx, sy - ch * 0.56);
+      ctx.moveTo(sx, sy - ch * 0.55);
+      ctx.quadraticCurveTo(sx + cw * 0.55, sy, sx, sy + ch * 0.57);
+      ctx.quadraticCurveTo(sx - cw * 0.55, sy, sx, sy - ch * 0.55);
       ctx.fill();
     }
   }
 
-  // Paint ribbed ventral belly scutes down center band (u in [0.37, 0.63])
+  // Ribbed Sunny-Gold Ventral Belly Scutes
   const bellyLeft = W * 0.37;
   const bellyWidth = W * 0.26;
   const scuteRows = 32;
@@ -367,8 +349,8 @@ function buildSerpentBodyTexture(variant: SerpentSkinVariant): THREE.CanvasTextu
     const y = r * sh;
     const bg = ctx.createLinearGradient(bellyLeft, y, bellyLeft + bellyWidth, y + sh);
     bg.addColorStop(0, pal.bellyB);
-    bg.addColorStop(0.25, pal.bellyA);
-    bg.addColorStop(0.75, pal.bellyA);
+    bg.addColorStop(0.22, pal.bellyA);
+    bg.addColorStop(0.78, pal.bellyA);
     bg.addColorStop(1, pal.bellyB);
     ctx.fillStyle = bg;
     ctx.strokeStyle = pal.crevice;
@@ -387,33 +369,31 @@ function buildSerpentBodyTexture(variant: SerpentSkinVariant): THREE.CanvasTextu
 }
 
 /**
- * Charred Volcanic Basalt + Glowing Molten Magma Cracks Texture for Magma Crusher & Juggernaut.
+ * Crisp Royal Cobalt-Slate Stone + Vivid Tangerine-Gold Veins (Painted contrast, zero bloom blur).
  */
 function buildMagmaCracksTexture(): THREE.CanvasTexture {
   const S = 512;
   const [c, ctx] = createCanvas(S, S);
-  ctx.fillStyle = '#1c1917';
+  ctx.fillStyle = '#1e293b';
   ctx.fillRect(0, 0, S, S);
 
-  // Basalt stone chunks
   for (let i = 0; i < 65; i++) {
-    const x = ((i * 97) % S);
-    const y = ((i * 151) % S);
+    const x = (i * 97) % S;
+    const y = (i * 151) % S;
     const r = 26 + (i % 5) * 11;
     const g = ctx.createRadialGradient(x, y, 4, x, y, r);
-    g.addColorStop(0, '#3f3a36');
-    g.addColorStop(0.78, '#262220');
-    g.addColorStop(1, '#ff4d00');
+    g.addColorStop(0, '#475569');
+    g.addColorStop(0.76, '#334155');
+    g.addColorStop(1, '#ff6d00');
     ctx.fillStyle = g;
     ctx.beginPath();
     ctx.arc(x, y, r, 0, Math.PI * 2);
     ctx.fill();
   }
 
-  // Incandescent magma veins
-  ctx.strokeStyle = '#ff9500';
-  ctx.lineWidth = 4;
-  for (let k = 0; k < 18; k++) {
+  ctx.strokeStyle = '#ffd60a';
+  ctx.lineWidth = 4.5;
+  for (let k = 0; k < 16; k++) {
     ctx.beginPath();
     let vx = (k * 53) % S;
     let vy = 0;
@@ -441,9 +421,9 @@ export function getCharacterTextures(): CharacterTextureSet {
     mochiHairTex: hair.albedo,
     mochiHairNormal: hair.normal,
     mochiDressTex: buildMochiDressTexture(),
-    reptileEyeGoldTex: buildReptileEyeTexture('#f59e0b', '#9a3412', '#fef08a'),
-    reptileEyeIceTex: buildReptileEyeTexture('#38bdf8', '#075985', '#e0f2fe'),
-    reptileEyeBossTex: buildReptileEyeTexture('#f43f5e', '#881337', '#fde047'),
+    reptileEyeGoldTex: buildReptileEyeTexture('#ff9e00', '#e63946', '#ffee32'),
+    reptileEyeIceTex: buildReptileEyeTexture('#ffbe0b', '#fb5607', '#fff3b0'),
+    reptileEyeBossTex: buildReptileEyeTexture('#ff006e', '#8338ec', '#ffbe0b'),
     magmaCracksTex: buildMagmaCracksTexture(),
     serpentSkins: {
       venom_naga: buildSerpentBodyTexture('venom_naga'),

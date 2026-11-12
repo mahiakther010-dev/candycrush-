@@ -1,9 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
-import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
-import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
-import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
-import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { Language } from '../types/game';
 import { createCandyStudioEnvironment, setupCinematicLights } from '../three/studioEnv';
 import { createCandyMesh3D } from '../three/candyMeshes3D';
@@ -54,11 +50,11 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.12;
+    renderer.toneMapping = THREE.NeutralToneMapping;
+    renderer.toneMappingExposure = 1.04;
 
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color('#131c3d');
+    scene.background = new THREE.Color('#1d4ed8');
     const envTex = createCandyStudioEnvironment(renderer);
     scene.environment = envTex;
 
@@ -66,23 +62,16 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
     camera.position.set(0, 0.35, 7.35);
     camera.lookAt(0, 0.05, 0);
 
-    const composer = new EffectComposer(renderer);
-    composer.addPass(new RenderPass(scene, camera));
-    const bloomPass = new UnrealBloomPass(new THREE.Vector2(420, 245), 0.34, 0.55, 0.86);
-    composer.addPass(bloomPass);
-    composer.addPass(new OutputPass());
-
     setupCinematicLights(scene);
 
-    // Caramel-Gold Pedestal Stage
+    // Vibrant Sunny-Gold & Turquoise Pedestal Stage (Zero bloom haze!)
     const pedestal = new THREE.Mesh(
       new THREE.CylinderGeometry(2.1, 2.35, 0.35, 36),
       new THREE.MeshPhysicalMaterial({
-        color: 0xf59e0b,
-        emissive: 0x451a03,
-        roughness: 0.16,
-        metalness: 0.35,
-        clearcoat: 1.0,
+        color: 0xffb703,
+        roughness: 0.18,
+        metalness: 0.28,
+        clearcoat: 0.95,
       })
     );
     pedestal.receiveShadow = true;
@@ -147,7 +136,6 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
         canvas.height !== Math.floor(h * renderer.getPixelRatio())
       ) {
         renderer.setSize(w, h, false);
-        composer.setSize(w, h);
         camera.aspect = w / h;
         camera.updateProjectionMatrix();
       }
@@ -179,14 +167,13 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
         }
       });
 
-      composer.render();
+      renderer.render(scene, camera);
       animId = requestAnimationFrame(renderLoop);
     };
 
     animId = requestAnimationFrame(renderLoop);
     return () => {
       cancelAnimationFrame(animId);
-      composer.dispose();
       envTex.dispose();
       renderer.dispose();
     };

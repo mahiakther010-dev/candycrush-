@@ -184,114 +184,96 @@ export function createMochiRig3D(): MochiRig3D {
   const root = new THREE.Group();
   const tex = getCharacterTextures();
 
-  // Studio-grade Subsurface Porcelain-Peach Skin Material
+  // Clean, Luminous Creamy-Peach Skin (Zero muddy emissive glow!)
   const skinMat = new THREE.MeshPhysicalMaterial({
     map: tex.mochiSkinTex,
     color: 0xffffff,
-    emissive: 0x471e14,
-    emissiveIntensity: 0.26,
-    roughness: 0.34,
+    roughness: 0.36,
     metalness: 0.0,
-    clearcoat: 0.18,
-    clearcoatRoughness: 0.48,
-    sheen: 0.45,
-    sheenColor: new THREE.Color(0xffc8be),
-    envMapIntensity: 1.25,
+    clearcoat: 0.15,
+    clearcoatRoughness: 0.5,
+    sheen: 0.35,
+    sheenColor: new THREE.Color(0xffccd5),
+    envMapIntensity: 1.05,
   });
 
-  // Anisotropic Silky Strawberry-Chestnut to Rose Hair Material
+  // Vibrant Sunset-Ruby to Coral-Gold Silk Hair
   const hairMat = new THREE.MeshPhysicalMaterial({
     map: tex.mochiHairTex,
     normalMap: tex.mochiHairNormal,
     normalScale: new THREE.Vector2(0.32, 0.32),
-    emissive: 0x3b0d20,
-    emissiveIntensity: 0.24,
-    roughness: 0.24,
-    metalness: 0.06,
-    clearcoat: 0.72,
-    clearcoatRoughness: 0.22,
-    sheen: 0.85,
-    sheenColor: new THREE.Color(0xffd6e7),
-    envMapIntensity: 1.65,
+    roughness: 0.25,
+    metalness: 0.04,
+    clearcoat: 0.68,
+    clearcoatRoughness: 0.24,
+    sheen: 0.75,
+    sheenColor: new THREE.Color(0xffe5ec),
+    envMapIntensity: 1.25,
   });
 
-  // Royal Embroidered Velvet Dress Material
+  // Eye-Catching Electric Cobalt-Turquoise & Gold Royal Dress!
   const dressMat = new THREE.MeshPhysicalMaterial({
     map: tex.mochiDressTex,
-    emissive: 0x3b071b,
-    emissiveIntensity: 0.24,
-    roughness: 0.36,
-    sheen: 0.92,
-    sheenColor: new THREE.Color(0xffb8d0),
-    clearcoat: 0.28,
-    envMapIntensity: 1.4,
+    roughness: 0.34,
+    sheen: 0.85,
+    sheenColor: new THREE.Color(0x90e0ef),
+    clearcoat: 0.25,
+    envMapIntensity: 1.15,
   });
 
-  // Cream Satin Blouse & Stockings Material
+  // Pure Crisp Snow-White Puff Sleeves, Collar & Stockings
   const satinCreamMat = new THREE.MeshPhysicalMaterial({
-    color: 0xfff7f2,
-    emissive: 0x331b24,
-    emissiveIntensity: 0.2,
+    color: 0xffffff,
     roughness: 0.28,
-    sheen: 0.8,
+    sheen: 0.7,
     sheenColor: new THREE.Color(0xffffff),
-    clearcoat: 0.35,
+    clearcoat: 0.3,
   });
 
-  // Royal Crimson-Berry Capelet & Ribbon Material
+  // Vibrant Hot-Magenta / Royal Berry Capelet & Satin Hair Bows!
   const capeMat = new THREE.MeshPhysicalMaterial({
-    color: 0xe11d58,
-    emissive: 0x4c0519,
-    emissiveIntensity: 0.28,
-    roughness: 0.32,
-    sheen: 0.95,
-    sheenColor: new THREE.Color(0xffacc5),
-    clearcoat: 0.35,
+    color: 0xff0a54,
+    roughness: 0.3,
+    sheen: 0.9,
+    sheenColor: new THREE.Color(0xffb3c6),
+    clearcoat: 0.3,
     side: THREE.DoubleSide,
   });
 
-  // Polished 24k Gold Filigree & Buckles
+  // Sunny 24K Gold Trim & Buckles (Crisp metallic, zero glow haze)
   const goldMat = new THREE.MeshPhysicalMaterial({
-    color: 0xffd447,
-    emissive: 0x6e4700,
-    emissiveIntensity: 0.55,
-    roughness: 0.12,
-    metalness: 0.92,
+    color: 0xffcc00,
+    roughness: 0.15,
+    metalness: 0.88,
     clearcoat: 1.0,
-    envMapIntensity: 2.1,
+    envMapIntensity: 1.5,
   });
 
   const rubyGemMat = new THREE.MeshPhysicalMaterial({
-    color: 0xff1744,
-    emissive: 0x990026,
-    emissiveIntensity: 0.85,
-    roughness: 0.04,
+    color: 0x00f5d4,
+    roughness: 0.05,
     clearcoat: 1.0,
-    transmission: 0.45,
-    ior: 1.54,
+    envMapIntensity: 1.5,
   });
 
   const bootLeatherMat = new THREE.MeshPhysicalMaterial({
-    color: 0x9f1239,
-    emissive: 0x2e0512,
-    emissiveIntensity: 0.22,
+    color: 0xe6194b,
     roughness: 0.22,
-    clearcoat: 0.78,
+    clearcoat: 0.75,
     clearcoatRoughness: 0.18,
   });
 
   const bootSoleMat = new THREE.MeshStandardMaterial({
-    color: 0x29151c,
-    roughness: 0.65,
+    color: 0x1e293b,
+    roughness: 0.6,
   });
 
-  const lashMat = new THREE.MeshBasicMaterial({ color: 0x240b15 });
-  const mouthCavityMat = new THREE.MeshBasicMaterial({ color: 0x7a0c2e });
+  const lashMat = new THREE.MeshBasicMaterial({ color: 0x1e1b4b });
+  const mouthCavityMat = new THREE.MeshBasicMaterial({ color: 0x9b0036 });
   const tongueMat = new THREE.MeshPhysicalMaterial({
-    color: 0xff7597,
-    emissive: 0x4a0c1d,
-    roughness: 0.25,
-    clearcoat: 0.8,
+    color: 0xff5c8a,
+    roughness: 0.28,
+    clearcoat: 0.7,
   });
   const teethMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
 
@@ -301,16 +283,14 @@ export function createMochiRig3D(): MochiRig3D {
     clearcoat: 1.0,
     clearcoatRoughness: 0.01,
     ior: 1.38,
-    envMapIntensity: 1.9,
+    envMapIntensity: 1.35,
   });
 
   const tearMat = new THREE.MeshPhysicalMaterial({
-    color: 0x7dd3fc,
-    emissive: 0x0369a1,
-    emissiveIntensity: 0.35,
-    roughness: 0.02,
+    color: 0x38bdf8,
+    roughness: 0.03,
     clearcoat: 1.0,
-    transmission: 0.75,
+    transmission: 0.7,
     ior: 1.33,
   });
 

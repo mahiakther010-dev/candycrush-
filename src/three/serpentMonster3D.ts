@@ -130,75 +130,65 @@ export function createSerpentRig3D(
   const scaleMat = new THREE.MeshPhysicalMaterial({
     map: bodySkinTex,
     color: 0xffffff,
-    emissive: isBoss ? 0x24043d : variant === 'frost_wyrm' ? 0x06395e : 0x07290d,
-    emissiveIntensity: 0.32,
-    roughness: 0.16,
-    metalness: 0.14,
-    clearcoat: 1.0,
+    roughness: 0.18,
+    metalness: 0.1,
+    clearcoat: 0.95,
     clearcoatRoughness: 0.08,
     normalMap: normalTex,
-    normalScale: new THREE.Vector2(0.85, 0.85),
-    iridescence: 0.52,
-    iridescenceIOR: 1.4,
-    envMapIntensity: 1.9,
+    normalScale: new THREE.Vector2(0.75, 0.75),
+    envMapIntensity: 1.35,
   });
 
   const headScaleMat = new THREE.MeshPhysicalMaterial({
     color:
       variant === 'boss_dragon'
-        ? 0x6b21a8
+        ? 0x7b2cbf
         : variant === 'frost_wyrm'
-          ? 0x0284c7
+          ? 0x0096ff
           : variant === 'river_gharial'
-            ? 0x0f766e
-            : 0x16a34a,
-    emissive:
-      variant === 'boss_dragon'
-        ? 0x2e064d
-        : variant === 'frost_wyrm'
-          ? 0x073b5e
-          : 0x062e10,
-    emissiveIntensity: 0.35,
-    roughness: 0.15,
-    metalness: 0.16,
-    clearcoat: 1.0,
+            ? 0x00bfa5
+            : 0x00c838,
+    roughness: 0.18,
+    metalness: 0.12,
+    clearcoat: 0.95,
     clearcoatRoughness: 0.08,
     normalMap: normalTex,
-    normalScale: new THREE.Vector2(0.75, 0.75),
-    iridescence: 0.55,
-    envMapIntensity: 1.9,
+    normalScale: new THREE.Vector2(0.7, 0.7),
+    envMapIntensity: 1.35,
   });
 
   const bellyMat = new THREE.MeshPhysicalMaterial({
-    color: variant === 'frost_wyrm' ? 0xe0f2fe : 0xfde047,
-    emissive: variant === 'frost_wyrm' ? 0x0c4a6e : 0x422006,
-    emissiveIntensity: 0.25,
+    color: variant === 'frost_wyrm' ? 0x72efdd : 0xffd60a,
     roughness: 0.22,
-    clearcoat: 0.85,
+    clearcoat: 0.8,
   });
 
+  // High-contrast vibrant horn & crest colors (Crimson-Gold / Coral-Orange / Sunny Gold)
   const hornMat = new THREE.MeshPhysicalMaterial({
-    color: isBoss ? 0xffcf33 : variant === 'frost_wyrm' ? 0xbae6fd : 0xfef3c7,
-    emissive: isBoss ? 0x5c3800 : 0x1c1917,
-    emissiveIntensity: 0.35,
+    color:
+      variant === 'boss_dragon'
+        ? 0xffcc00
+        : variant === 'frost_wyrm'
+          ? 0xff9e00
+          : variant === 'river_gharial'
+            ? 0xff6d00
+            : 0xff1744,
     roughness: 0.18,
-    metalness: isBoss ? 0.82 : 0.25,
+    metalness: isBoss ? 0.8 : 0.25,
     clearcoat: 0.95,
   });
 
   const fangMat = new THREE.MeshPhysicalMaterial({
     color: 0xffffff,
-    roughness: 0.05,
+    roughness: 0.06,
     clearcoat: 1.0,
-    envMapIntensity: 2.0,
+    envMapIntensity: 1.5,
   });
 
   const gumMat = new THREE.MeshPhysicalMaterial({
-    color: 0xbe123c,
-    emissive: 0x4c0519,
-    emissiveIntensity: 0.35,
-    roughness: 0.12,
-    clearcoat: 1.0,
+    color: 0xff0a54,
+    roughness: 0.16,
+    clearcoat: 0.9,
   });
 
   const eyeTex =
@@ -210,18 +200,14 @@ export function createSerpentRig3D(
 
   const eyeMat = new THREE.MeshPhysicalMaterial({
     map: eyeTex,
-    emissive: variant === 'boss_dragon' ? 0xf43f5e : variant === 'frost_wyrm' ? 0x38bdf8 : 0xfbbf24,
-    emissiveMap: eyeTex,
-    emissiveIntensity: 0.95,
-    roughness: 0.02,
+    roughness: 0.03,
     clearcoat: 1.0,
+    envMapIntensity: 1.35,
   });
 
   const rubyMat = new THREE.MeshPhysicalMaterial({
-    color: 0xff1744,
-    emissive: 0xb8002e,
-    emissiveIntensity: 0.95,
-    roughness: 0.04,
+    color: 0xff0044,
+    roughness: 0.06,
     clearcoat: 1.0,
   });
 
@@ -454,13 +440,9 @@ export function updateSerpentAlongCurve(
   bodyArcFraction: number = 0.48
 ) {
   if (isFrozen) {
-    rig.scaleMat.color.setHex(0x7dd3fc);
-    rig.scaleMat.emissive.setHex(0x0369a1);
+    rig.scaleMat.color.setHex(0x38bdf8);
   } else {
     rig.scaleMat.color.setHex(0xffffff);
-    rig.scaleMat.emissive.setHex(
-      isBoss ? 0x24043d : rig.variant === 'frost_wyrm' ? 0x06395e : 0x07290d
-    );
   }
   rig.crownGroup.visible = isBoss;
 
@@ -599,26 +581,25 @@ export function createMagmaGolemRig3D(): MagmaGolemRig3D {
 
   const rockMat = new THREE.MeshPhysicalMaterial({
     map: charTex.magmaCracksTex,
-    emissive: 0xff4500,
-    emissiveMap: charTex.magmaCracksTex,
-    emissiveIntensity: 0.72,
-    roughness: 0.45,
-    metalness: 0.22,
+    roughness: 0.35,
+    metalness: 0.18,
     normalMap: pbr.stoneBrickNormal,
-    normalScale: new THREE.Vector2(0.75, 0.75),
-    clearcoat: 0.25,
+    normalScale: new THREE.Vector2(0.7, 0.7),
+    clearcoat: 0.35,
   });
 
-  const magmaCoreMat = new THREE.MeshBasicMaterial({
-    color: new THREE.Color(2.4, 0.85, 0.15), // HDR Bloom furnace glow!
+  // Crisp Vibrant Tangerine-Gold Core (Zero bloom blur)
+  const magmaCoreMat = new THREE.MeshPhysicalMaterial({
+    color: 0xff6d00,
+    roughness: 0.12,
+    clearcoat: 1.0,
   });
 
   const ironSpikeMat = new THREE.MeshPhysicalMaterial({
-    color: 0xe2e8f0,
-    emissive: 0x451a03,
-    roughness: 0.18,
-    metalness: 0.9,
-    clearcoat: 0.85,
+    color: 0xffcc00,
+    roughness: 0.16,
+    metalness: 0.85,
+    clearcoat: 0.9,
   });
 
   const torsoGroup = new THREE.Group();
@@ -718,7 +699,7 @@ export function updateMagmaGolemAnimation(
   time: number,
   isFrozen: boolean
 ) {
-  rig.rockMat.emissive.setHex(isFrozen ? 0x0284c7 : 0xff4500);
+  rig.rockMat.color.setHex(isFrozen ? 0x38bdf8 : 0xffffff);
   if (isFrozen) return;
 
   rig.torsoGroup.position.y = Math.abs(Math.sin(time * 4.8)) * 0.11;
@@ -739,31 +720,31 @@ export function createJuggernautBeastRig3D(): JuggernautBeastRig3D {
   const pbr = getProceduralPBRMaps();
 
   const armorMat = new THREE.MeshPhysicalMaterial({
-    color: 0xbe123c,
-    emissive: 0x4c0519,
-    emissiveIntensity: 0.42,
-    roughness: 0.16,
-    metalness: 0.55,
-    clearcoat: 1.0,
+    color: 0xff0a54,
+    roughness: 0.18,
+    metalness: 0.35,
+    clearcoat: 0.95,
     normalMap: pbr.reptileScaleNormal,
-    normalScale: new THREE.Vector2(0.65, 0.65),
-    iridescence: 0.45,
-    envMapIntensity: 2.0,
+    normalScale: new THREE.Vector2(0.6, 0.6),
+    envMapIntensity: 1.4,
+  });
+
+  const cobaltPlateMat = new THREE.MeshPhysicalMaterial({
+    color: 0x0077ff,
+    roughness: 0.18,
+    metalness: 0.45,
+    clearcoat: 0.95,
   });
 
   const bladeMat = new THREE.MeshPhysicalMaterial({
-    color: 0xfef08a,
-    emissive: 0x713f12,
-    emissiveIntensity: 0.35,
-    roughness: 0.14,
-    metalness: 0.88,
+    color: 0xffcc00,
+    roughness: 0.15,
+    metalness: 0.85,
     clearcoat: 1.0,
   });
 
   const eyeMat = new THREE.MeshPhysicalMaterial({
     map: charTex.reptileEyeBossTex,
-    emissive: 0xfbbf24,
-    emissiveIntensity: 1.1,
     roughness: 0.04,
     clearcoat: 1.0,
   });
@@ -774,10 +755,10 @@ export function createJuggernautBeastRig3D(): JuggernautBeastRig3D {
   const coreSphere = new THREE.Mesh(new THREE.SphereGeometry(0.74, 28, 24), armorMat);
   wheelBody.add(coreSphere);
 
-  // Overlapping Sculpted Chitin Armor Plates + Curved Scythe Horn Blades!
+  // Overlapping Sculpted Electric-Cobalt Chitin Armor Plates + Sunny Gold Scythe Horn Blades!
   const plateGeo = new THREE.TorusGeometry(0.74, 0.085, 10, 24, Math.PI * 1.4);
   for (let p = 0; p < 3; p++) {
-    const plate = new THREE.Mesh(plateGeo, armorMat);
+    const plate = new THREE.Mesh(plateGeo, cobaltPlateMat);
     plate.rotation.y = (p / 3) * Math.PI;
     wheelBody.add(plate);
   }

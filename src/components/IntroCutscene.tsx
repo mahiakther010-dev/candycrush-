@@ -31,11 +31,11 @@ export const IntroCutscene: React.FC<IntroCutsceneProps> = ({ lang, onComplete }
 
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-    renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.14;
+    renderer.toneMapping = THREE.NeutralToneMapping;
+    renderer.toneMappingExposure = 1.04;
 
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color('#151e3d');
+    scene.background = new THREE.Color('#1e40af');
     const envTex = createCandyStudioEnvironment(renderer);
     scene.environment = envTex;
 
