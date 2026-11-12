@@ -106,6 +106,11 @@ export const RescueGameStage: React.FC<RescueGameStageProps> = ({
   const [movesUsed, setMovesUsed] = useState<number>(0);
   const [score, setScore] = useState<number>(0);
   const [targetTool, setTargetTool] = useState<'hammer' | 'bomb' | null>(null);
+  // Mirror of targetTool for the render loop: reading state there would rebuild the 3D world
+  const targetToolRef = useRef<'hammer' | 'bomb' | null>(null);
+  useEffect(() => {
+    targetToolRef.current = targetTool;
+  }, [targetTool]);
   const [earnedStars, setEarnedStars] = useState<number>(3);
   const [banner, setBanner] = useState<FloatingBanner | null>(null);
   const [worldEpoch, setWorldEpoch] = useState<number>(0);
@@ -940,6 +945,12 @@ export const RescueGameStage: React.FC<RescueGameStageProps> = ({
     let uiAccum = 0;
 
     const tick = (now: number) => {
+      // Paused: skip physics + GPU work entirely (saves battery/heat on phones)
+      if (statusRef.current === 'paused') {
+        lastTime = now;
+        animId = requestAnimationFrame(tick);
+        return;
+      }
       const dt = Math.min(0.05, (now - lastTime) / 1000);
       lastTime = now;
       const timeSec = now / 1000;
@@ -1072,7 +1083,7 @@ export const RescueGameStage: React.FC<RescueGameStageProps> = ({
         showHint:
           statusRef.current === 'playing' &&
           !busyRef.current &&
-          !targetTool &&
+          !targetToolRef.current &&
           idleSecondsRef.current >= 3.5,
       });
 
@@ -1085,7 +1096,7 @@ export const RescueGameStage: React.FC<RescueGameStageProps> = ({
       world.dispose();
       worldRef.current = null;
     };
-  }, [level, status === 'intro', targetTool, worldEpoch]);
+  }, [level, status === 'intro', worldEpoch]);
 
   if (status === 'intro') {
     return (

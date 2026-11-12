@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
+import { getRenderProfile } from '../three/renderProfile';
 import { Language } from '../types/game';
 import { createCandyStudioEnvironment, setupCinematicLights } from '../three/studioEnv';
 import { createMochiRig3D, updateMochiRigAnimation } from '../three/mochiCharacter3D';
@@ -76,8 +77,9 @@ export const CharacterShowcase3DModal: React.FC<CharacterShowcase3DModalProps> =
       antialias: true,
       powerPreference: 'high-performance',
     });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-    renderer.shadowMap.enabled = true;
+    const profile = getRenderProfile();
+    renderer.setPixelRatio(profile.pixelRatio);
+    renderer.shadowMap.enabled = profile.shadows;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.toneMapping = THREE.NeutralToneMapping;
     renderer.toneMappingExposure = 1.04;

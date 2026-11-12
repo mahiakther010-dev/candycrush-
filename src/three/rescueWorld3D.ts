@@ -13,6 +13,7 @@ import {
 import { HintMove } from '../engine/match3';
 import { createCandyStudioEnvironment, setupCinematicLights, StudioLights } from './studioEnv';
 import { getProceduralPBRMaps } from './proceduralTextures3D';
+import { getRenderProfile } from './renderProfile';
 import {
   createBlockerMesh3D,
   createCandyMesh3D,
@@ -90,6 +91,10 @@ export interface WorldSyncState {
 }
 
 const TILE_PITCH = 0.96;
+const SNAKE_BASE_COLOR = new THREE.Color(0xffffff);
+const SNAKE_FROST_COLOR = new THREE.Color(0x38bdf8);
+const SNAKE_HIT_COLOR = new THREE.Color(0xff2a5f);
+const snakeTintScratch = new THREE.Color();
 const BOARD_CENTER_Y = -2.62;
 const ARENA_BASE_Y = 1.32;
 
@@ -122,7 +127,13 @@ export class RescueWorld3D {
   // Dynamic Board Caches
   private candyEntries = new Map<
     number,
-    { mesh: THREE.Group; color: CandyColor; special: SpecialType }
+    {
+      mesh: THREE.Group;
+      color: CandyColor;
+      special: SpecialType;
+      body: THREE.Object3D | null;
+      spinRing: THREE.Object3D | null;
+    }
   >();
   private blockerEntries = new Map<string, { mesh: THREE.Group; blocker: BlockerType }>();
   private selectionRing: THREE.Mesh;
@@ -166,14 +177,15 @@ export class RescueWorld3D {
     this.boardOriginX = -((level.cols - 1) * TILE_PITCH) * 0.5;
     this.boardOriginY = BOARD_CENTER_Y + ((level.rows - 1) * TILE_PITCH) * 0.5;
 
+    const profile = getRenderProfile();
     this.renderer = new THREE.WebGLRenderer({
       canvas,
-      antialias: true,
+      antialias: profile.antialias,
       alpha: false,
       powerPreference: 'high-performance',
     });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-    this.renderer.shadowMap.enabled = true;
+    this.renderer.setPixelRatio(profile.pixelRatio);
+    this.renderer.shadowMap.enabled = profile.shadows;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.toneMapping = THREE.NeutralToneMapping;
     this.renderer.toneMappingExposure = 1.04;
@@ -237,22 +249,18 @@ export class RescueWorld3D {
   }
 
   /** Point on the Snake's path for a given progress 0–1 (matches the Snake's head position) */
-  private snakePathPoint(progress: number): THREE.Vector3 {
+  private snakePathPoint(progress: number, out: THREE.Vector3 = new THREE.Vector3()): THREE.Vector3 {
     const p = THREE.MathUtils.clamp(progress, 0, 1);
     if (this.curveMain) {
-      return this.curveMain.getPointAt(THREE.MathUtils.clamp(0.06 + p * 0.92, 0.06, 0.99)).clone();
+      return this.curveMain.getPointAt(THREE.MathUtils.clamp(0.06 + p * 0.92, 0.06, 0.99), out);
     }
     if (this.level.scene === 'lava_bridge') {
-      return new THREE.Vector3(-3.75 + p * 1.68, 4.25, 0.3);
+      return out.set(-3.75 + p * 1.68, 4.25, 0.3);
     }
     if (this.level.scene === 'boulder_run') {
-      return new THREE.Vector3(
-        THREE.MathUtils.lerp(-3.5, 3.35, p),
-        THREE.MathUtils.lerp(5.1, 2.75, p),
-        0.3
-      );
+      return out.set(THREE.MathUtils.lerp(-3.5, 3.35, p), THREE.MathUtils.lerp(5.1, 2.75, p), 0.3);
     }
-    return new THREE.Vector3(0, 4, 0.3);
+    return out.set(0, 4, 0.3);
   }
 
   /** Obstacle barriers the Snake must break through, placed on its path */
@@ -313,7 +321,7 @@ export class RescueWorld3D {
 
   /** Barriers shrink away when broken; Snake tint follows HP; defeat bursts the Snake apart */
   private applySnakeCombatVisuals(state: WorldSyncState, dt: number, time: number) {
-    this.snakeHeadPos.copy(this.snakePathPoint(state.danger / 100));
+    this.snakePathPoint(state.danger / 100, this.snakeHeadPos);
 
     for (const b of this.snakeBarriers) {
       const ob = state.snakeObstacles[b.index];
@@ -334,11 +342,11 @@ export class RescueWorld3D {
     const hpRatio = THREE.MathUtils.clamp(state.snakeHpPct / 100, 0, 1);
     const hit = state.snakeHitTimer > 0 ? state.snakeHitTimer / 0.26 : 0;
     const frozen = state.freezeTimer > 0;
-    const base = frozen ? new THREE.Color(0x38bdf8) : new THREE.Color(0xffffff);
     // Brightness falls with HP so a wounded Snake looks visibly beaten down
-    base.multiplyScalar(0.42 + 0.58 * hpRatio);
-    const hitColor = new THREE.Color(0xff2a5f);
-    const tint = base.clone().lerp(hitColor, hit);
+    const tint = snakeTintScratch
+      .copy(frozen ? SNAKE_FROST_COLOR : SNAKE_BASE_COLOR)
+      .multiplyScalar(0.42 + 0.58 * hpRatio)
+      .lerp(SNAKE_HIT_COLOR, hit);
 
     const rigs = [this.serpentMain, this.serpentTwin];
     if (state.snakeHpPct <= 0 && this.lastSnakeHpPct > 0) {
@@ -1228,7 +1236,9 @@ export class RescueWorld3D {
           if (entry) this.boardGroup.remove(entry.mesh);
           const mesh = createCandyMesh3D(p.color, p.special);
           this.boardGroup.add(mesh);
-          entry = { mesh, color: p.color, special: p.special };
+          const body = mesh.getObjectByName('candyBody') ?? null;
+          const spinRing = body?.getObjectByName('spinRing') ?? null;
+          entry = { mesh, color: p.color, special: p.special, body, spinRing };
           this.candyEntries.set(p.id, entry);
         }
 
@@ -1242,12 +1252,12 @@ export class RescueWorld3D {
         const sc = p.scale * (isSelected ? 1.14 : 1.0);
         entry.mesh.scale.setScalar(sc);
 
-        const body = entry.mesh.getObjectByName('candyBody');
+        const body = entry.body;
         if (body) {
           body.rotation.y = isSelected
             ? time * 3.2
             : Math.sin(time * 2.1 + p.id * 0.7) * 0.16;
-          const spinRing = body.getObjectByName('spinRing');
+          const spinRing = entry.spinRing;
           if (spinRing) {
             spinRing.rotation.z = time * 2.8;
             spinRing.rotation.x = Math.sin(time * 2) * 0.35;
@@ -1459,6 +1469,17 @@ export class RescueWorld3D {
   }
 
   public dispose() {
+    // Free GPU buffers/programs for everything this mission created.
+    // Shared geometry/material caches are simply re-uploaded if used again.
+    this.scene.traverse((obj) => {
+      const mesh = obj as THREE.Mesh;
+      if (!mesh.isMesh) return;
+      mesh.geometry?.dispose();
+      const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+      for (const m of mats) m?.dispose();
+    });
+    this.candyEntries.clear();
+    this.blockerEntries.clear();
     this.liquidNormalTex.dispose();
     this.envTex.dispose();
     this.renderer.dispose();

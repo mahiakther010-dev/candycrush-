@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
+import { getRenderProfile } from '../three/renderProfile';
 import { Language } from '../types/game';
 import { createCandyStudioEnvironment, setupCinematicLights } from '../three/studioEnv';
 import { createCandyMesh3D, createHintHand3D } from '../three/candyMeshes3D';
@@ -29,8 +30,9 @@ export const IntroCutscene: React.FC<IntroCutsceneProps> = ({ lang, onComplete }
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    const profile = getRenderProfile();
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: profile.antialias });
+    renderer.setPixelRatio(profile.pixelRatio);
     renderer.toneMapping = THREE.NeutralToneMapping;
     renderer.toneMappingExposure = 1.04;
 

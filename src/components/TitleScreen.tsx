@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
+import { getRenderProfile } from '../three/renderProfile';
 import { Language } from '../types/game';
 import { createCandyStudioEnvironment, setupCinematicLights } from '../three/studioEnv';
 import { createCandyMesh3D } from '../three/candyMeshes3D';
@@ -46,9 +47,10 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
     const canvas = heroCanvasRef.current;
     if (!canvas) return;
 
-    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-    renderer.shadowMap.enabled = true;
+    const profile = getRenderProfile();
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: profile.antialias });
+    renderer.setPixelRatio(profile.pixelRatio);
+    renderer.shadowMap.enabled = profile.shadows;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.toneMapping = THREE.NeutralToneMapping;
     renderer.toneMappingExposure = 1.04;
