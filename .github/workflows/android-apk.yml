@@ -18,7 +18,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: android-apk-${{ github.ref }}
@@ -65,3 +65,16 @@ jobs:
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 30
+
+      - name: Publish APK to rolling "android-latest" pre-release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp android/app/build/outputs/apk/debug/app-debug.apk CandyRescueSaga-debug.apk
+          NOTES="Auto-built debug APK. Branch: ${GITHUB_REF_NAME} | Commit: ${GITHUB_SHA}. On Android: download, allow 'Install unknown apps', then open the file."
+          if gh release view android-latest >/dev/null 2>&1; then
+            gh release edit android-latest --notes "$NOTES" --target "$GITHUB_SHA"
+          else
+            gh release create android-latest --prerelease --title "Candy Rescue Saga - Android APK (latest)" --notes "$NOTES" --target "$GITHUB_SHA"
+          fi
+          gh release upload android-latest CandyRescueSaga-debug.apk --clobber
