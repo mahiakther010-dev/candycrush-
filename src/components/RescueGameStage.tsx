@@ -3,10 +3,14 @@ import * as THREE from 'three';
 import {
   BoosterKind,
   CandyColor,
+  createSnakeObstacles,
   GameStatus,
   GridCell,
   Language,
   LevelConfig,
+  SNAKE_BOSS_DAMAGE_SCALE,
+  SNAKE_PUSHBACK_PER_PERCENT,
+  SnakeObstacleState,
   SpecialType,
   TaskProgress,
 } from '../types/game';
@@ -14,8 +18,10 @@ import {
   applyGravityAndRefill,
   applyWindConveyor,
   buildInitialBoard,
+  calculateSnakeDamage,
   canSwapCells,
   collectBottomKeys,
+  countSmashedForObstacles,
   createPiece,
   findBestHintMove,
   findMatches,
@@ -103,6 +109,10 @@ export const RescueGameStage: React.FC<RescueGameStageProps> = ({
   const [earnedStars, setEarnedStars] = useState<number>(3);
   const [banner, setBanner] = useState<FloatingBanner | null>(null);
   const [worldEpoch, setWorldEpoch] = useState<number>(0);
+  const [snakeHp, setSnakeHp] = useState<number>(100);
+  const [snakeObstaclesUI, setSnakeObstaclesUI] = useState<SnakeObstacleState[]>(() =>
+    createSnakeObstacles(Boolean(level.isBoss))
+  );
 
   // Mutable 60fps engine refs
   const gridRef = useRef<GridCell[][]>([]);
@@ -112,6 +122,11 @@ export const RescueGameStage: React.FC<RescueGameStageProps> = ({
   const scoreRef = useRef<number>(0);
   const movesUsedRef = useRef<number>(0);
   const shieldActiveRef = useRef<boolean>(false);
+  // Snake HP: 100 = full, 0 = defeated (chipped down 1% → 100% by candy bursts)
+  const snakeHpRef = useRef<number>(100);
+  const snakeObstaclesRef = useRef<SnakeObstacleState[]>(createSnakeObstacles(Boolean(level.isBoss)));
+  const snakeHitTimerRef = useRef<number>(0);
+  const mochiCaughtRef = useRef<boolean>(false);
 
   const busyRef = useRef<boolean>(false);
   const selectedCellRef = useRef<{ row: number; col: number } | null>(null);
@@ -154,6 +169,12 @@ export const RescueGameStage: React.FC<RescueGameStageProps> = ({
 
       dangerRef.current = 4;
       setDanger(4);
+      snakeHpRef.current = 100;
+      setSnakeHp(100);
+      snakeObstaclesRef.current = createSnakeObstacles(Boolean(level.isBoss));
+      setSnakeObstaclesUI(snakeObstaclesRef.current.map((o) => ({ ...o })));
+      snakeHitTimerRef.current = 0;
+      mochiCaughtRef.current = false;
       setIsFrozenUI(false);
       shieldActiveRef.current = false;
       setShieldActiveUI(false);
@@ -187,10 +208,20 @@ export const RescueGameStage: React.FC<RescueGameStageProps> = ({
     resetMission(false);
   }, [resetMission]);
 
+  /** Snake cannot pass an uncleared obstacle: progress stalls exactly on the obstacle mark */
+  const clampSnakeProgress = (value: number): number => {
+    for (const ob of snakeObstaclesRef.current) {
+      if (!ob.cleared && value >= ob.progress * 100) return ob.progress * 100;
+    }
+    return value;
+  };
+
   const checkWinCondition = useCallback(() => {
     if (statusRef.current !== 'playing') return;
     const allComplete = tasksRef.current.every((t) => t.current >= t.target);
-    if (allComplete) {
+    // Win = all objectives done OR Snake HP reduced to 0% (Snake defeated)
+    const snakeDefeated = snakeHpRef.current <= 0;
+    if (allComplete || snakeDefeated) {
       statusRef.current = 'rescuing';
       setStatus('rescuing');
       rescueAnimRef.current = 0;
@@ -233,6 +264,61 @@ export const RescueGameStage: React.FC<RescueGameStageProps> = ({
 
       if (blast.totalCandiesCleared > 0) {
         happyTimerRef.current = 1.25;
+      }
+
+      // ── SNAKE HP DAMAGE (1% → 100%) + OBSTACLE SMASH ─────────────────────
+      const snakeHit = calculateSnakeDamage(
+        blast,
+        comboIndex,
+        level.isBoss ? SNAKE_BOSS_DAMAGE_SCALE : 1
+      );
+      if (snakeHit.percent > 0 && snakeHpRef.current > 0) {
+        snakeHpRef.current = Math.max(0, snakeHpRef.current - snakeHit.percent);
+        setSnakeHp(snakeHpRef.current);
+        snakeHitTimerRef.current = 0.26;
+        // Knockback: every HP chunk pushes the Snake back along its path
+        dangerRef.current = Math.max(
+          2,
+          dangerRef.current - snakeHit.percent * SNAKE_PUSHBACK_PER_PERCENT
+        );
+        setDanger(dangerRef.current);
+        world?.spawnSnakeHitBurst(snakeHit.isMegaKill ? 24 : 6 + Math.round(snakeHit.percent / 3));
+        soundEngine.playSpecialBlast(snakeHit.percent >= 12 ? 'bomb' : 'striped');
+        if (snakeHit.percent >= 12 || snakeHit.isMegaKill) {
+          showFloatingBanner(
+            snakeHit.isMegaKill
+              ? lang === 'bn'
+                ? 'মেগা কিল! সাপের HP ১০০% শেষ!'
+                : 'MEGA KILL! SNAKE HP -100%!'
+              : lang === 'bn'
+                ? `-${snakeHit.percent}% সাপের HP!`
+                : `-${snakeHit.percent}% SNAKE HP!`,
+            'from-rose-300 via-orange-300 to-amber-300'
+          );
+        }
+        if (snakeHpRef.current <= 0) {
+          showFloatingBanner(
+            lang === 'bn' ? 'সাপ পরাজিত!' : 'SNAKE DEFEATED!',
+            'from-lime-200 to-emerald-300'
+          );
+        }
+      }
+
+      const smashed = countSmashedForObstacles(blast);
+      const frontObstacle = snakeObstaclesRef.current.find((o) => !o.cleared);
+      if (frontObstacle && smashed > 0) {
+        frontObstacle.remaining = Math.max(0, frontObstacle.remaining - smashed);
+        if (frontObstacle.remaining <= 0) {
+          frontObstacle.cleared = true;
+          soundEngine.playKeyUnlock();
+          showFloatingBanner(
+            lang === 'bn'
+              ? `${frontObstacle.labelBn} ভাঙা!`
+              : `${frontObstacle.labelEn} BROKEN!`,
+            'from-lime-200 to-emerald-300'
+          );
+        }
+        setSnakeObstaclesUI(snakeObstaclesRef.current.map((o) => ({ ...o })));
       }
 
       const gained =
@@ -334,7 +420,7 @@ export const RescueGameStage: React.FC<RescueGameStageProps> = ({
       setTasks(updated);
       checkWinCondition();
     },
-    [checkWinCondition, lang, level.scene, showFloatingBanner]
+    [checkWinCondition, lang, level.isBoss, level.scene, showFloatingBanner]
   );
 
   const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -461,7 +547,10 @@ export const RescueGameStage: React.FC<RescueGameStageProps> = ({
 
     if (level.moveLimit && (level.pressureMode === 'move_limited' || level.pressureMode === 'hybrid')) {
       if (level.pressureMode === 'move_limited') {
-        dangerRef.current = Math.min(100, Math.round((nextMoves / level.moveLimit) * 100));
+        // Each move advances the Snake by one slice; pushback and obstacles still apply
+        dangerRef.current = clampSnakeProgress(
+          Math.min(100, dangerRef.current + 96 / level.moveLimit)
+        );
         setDanger(dangerRef.current);
       }
       if (nextMoves >= level.moveLimit && statusRef.current === 'playing') {
@@ -864,6 +953,9 @@ export const RescueGameStage: React.FC<RescueGameStageProps> = ({
       if (shakeTimerRef.current > 0) {
         shakeTimerRef.current = Math.max(0, shakeTimerRef.current - dt);
       }
+      if (snakeHitTimerRef.current > 0) {
+        snakeHitTimerRef.current = Math.max(0, snakeHitTimerRef.current - dt);
+      }
 
       if (statusRef.current === 'playing') {
         idleSecondsRef.current += dt;
@@ -872,7 +964,9 @@ export const RescueGameStage: React.FC<RescueGameStageProps> = ({
           freezeTimerRef.current = Math.max(0, freezeTimerRef.current - dt);
           if (freezeTimerRef.current <= 0) setIsFrozenUI(false);
         } else if (level.dangerSpeed > 0) {
-          dangerRef.current = Math.min(100, dangerRef.current + level.dangerSpeed * dt);
+          dangerRef.current = clampSnakeProgress(
+            Math.min(100, dangerRef.current + level.dangerSpeed * dt)
+          );
           uiAccum += dt;
           if (uiAccum >= 0.12) {
             uiAccum = 0;
@@ -891,12 +985,15 @@ export const RescueGameStage: React.FC<RescueGameStageProps> = ({
             if (shieldActiveRef.current) {
               shieldActiveRef.current = false;
               setShieldActiveUI(false);
-              dangerRef.current = 68;
-              setDanger(68);
+              // Shield saves Mochi once, pushing the Snake back but never past an unbroken barrier
+              dangerRef.current = clampSnakeProgress(68);
+              setDanger(dangerRef.current);
               freezeTimerRef.current = 3.5;
               setIsFrozenUI(true);
               soundEngine.playFreeze();
             } else {
+              // SNAKE TOUCHED MOCHI → instant death
+              mochiCaughtRef.current = true;
               statusRef.current = 'lost';
               setDanger(100);
               setStatus('lost');
@@ -966,6 +1063,10 @@ export const RescueGameStage: React.FC<RescueGameStageProps> = ({
         happyTimer: happyTimerRef.current,
         surprisedTimer: surprisedTimerRef.current,
         shakeTimer: shakeTimerRef.current,
+        snakeHpPct: snakeHpRef.current,
+        snakeHitTimer: snakeHitTimerRef.current,
+        snakeObstacles: snakeObstaclesRef.current,
+        mochiCaught: mochiCaughtRef.current,
         selectedCell: selectedCellRef.current,
         hintMove: hintMoveRef.current,
         showHint:
@@ -1112,6 +1213,48 @@ export const RescueGameStage: React.FC<RescueGameStageProps> = ({
             </div>
           </div>
         </div>
+
+        {/* SNAKE HP BAR + OBSTACLE / TOUCH WARNING */}
+        <div className="flex items-center gap-2 bg-slate-950/85 border border-lime-400/50 rounded-xl px-2.5 py-1">
+          <SerpentDanger3DIcon size={18} />
+          <span className="text-[10px] font-extrabold uppercase tracking-wider text-lime-200 whitespace-nowrap">
+            {lang === 'bn' ? 'সাপের HP' : 'SNAKE HP'}
+          </span>
+          <div className="flex-1 h-2.5 bg-slate-800 rounded-full overflow-hidden p-0.5">
+            <div
+              className="h-full rounded-full transition-all duration-200 bg-gradient-to-r from-rose-500 via-orange-400 to-lime-300"
+              style={{ width: `${snakeHp}%` }}
+            />
+          </div>
+          <span className="text-[11px] font-extrabold text-white tabular-nums w-10 text-right">
+            {snakeHp}%
+          </span>
+        </div>
+        {status === 'playing' && danger >= 88 ? (
+          <div className="text-center text-[11px] sm:text-xs font-extrabold text-rose-200 animate-pulse">
+            {lang === 'bn'
+              ? 'সাপ কাছে! স্পর্শ করলে মোচি সাথে সাথে মরবে!'
+              : 'SNAKE CLOSE! TOUCH = MOCHI DIES INSTANTLY!'}
+          </div>
+        ) : (
+          (() => {
+            const nextOb = snakeObstaclesUI.find((o) => !o.cleared);
+            if (!nextOb) {
+              return (
+                <div className="text-center text-[11px] font-extrabold text-lime-200">
+                  {lang === 'bn' ? 'সব বাধা ভাঙা! সাপের দিকে ক্যান্ডি বার্স্ট করো' : 'All barriers broken! Burst candies on the Snake'}
+                </div>
+              );
+            }
+            return (
+              <div className="text-center text-[11px] font-extrabold text-amber-200">
+                {lang === 'bn'
+                  ? `বাধা ${nextOb.index + 1}/${snakeObstaclesUI.length}: ${nextOb.labelBn} — আরও ${nextOb.remaining} টি ভাঙো`
+                  : `Barrier ${nextOb.index + 1}/${snakeObstaclesUI.length}: ${nextOb.labelEn} — smash ${nextOb.remaining} more`}
+              </div>
+            );
+          })()
+        )}
 
         {/* Sculpted Objective Pills */}
         <div className="flex items-center justify-center flex-wrap gap-1.5">

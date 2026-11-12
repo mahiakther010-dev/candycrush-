@@ -6,6 +6,7 @@ import {
   GameStatus,
   GridCell,
   LevelConfig,
+  SnakeObstacleState,
   SpecialType,
   TaskProgress,
 } from '../types/game';
@@ -76,6 +77,13 @@ export interface WorldSyncState {
   happyTimer: number;
   surprisedTimer: number;
   shakeTimer: number;
+  /** Snake HP percent: 100 = full, 0 = defeated */
+  snakeHpPct: number;
+  /** Seconds left on the red hit-flash after a Special Candy burst */
+  snakeHitTimer: number;
+  snakeObstacles: SnakeObstacleState[];
+  /** True once the Snake touched Mochi (instant death pose) */
+  mochiCaught: boolean;
   selectedCell: { row: number; col: number } | null;
   hintMove: HintMove | null;
   showHint: boolean;
@@ -146,6 +154,12 @@ export class RescueWorld3D {
   private fragGeo = new THREE.OctahedronGeometry(0.13, 0);
   private marbleGeo = new THREE.SphereGeometry(0.145, 16, 14);
   private marbleMats: Record<CandyColor, THREE.MeshPhysicalMaterial>;
+
+  // Snake combat visuals
+  private snakeBarriers: Array<{ group: THREE.Group; index: number; cleared: boolean }> = [];
+  private snakeHeadPos = new THREE.Vector3(0, 4, 0.3);
+  private lastSnakeHpPct = 100;
+  private burstMats = new Map<number, THREE.MeshPhysicalMaterial>();
 
   constructor(canvas: HTMLCanvasElement, level: LevelConfig) {
     this.level = level;
@@ -219,6 +233,123 @@ export class RescueWorld3D {
     this.buildFantasyBackdrop();
     this.buildBoardTray3D();
     this.buildRescueArenaForLevel();
+    this.buildSnakeBarriers();
+  }
+
+  /** Point on the Snake's path for a given progress 0–1 (matches the Snake's head position) */
+  private snakePathPoint(progress: number): THREE.Vector3 {
+    const p = THREE.MathUtils.clamp(progress, 0, 1);
+    if (this.curveMain) {
+      return this.curveMain.getPointAt(THREE.MathUtils.clamp(0.06 + p * 0.92, 0.06, 0.99)).clone();
+    }
+    if (this.level.scene === 'lava_bridge') {
+      return new THREE.Vector3(-3.75 + p * 1.68, 4.25, 0.3);
+    }
+    if (this.level.scene === 'boulder_run') {
+      return new THREE.Vector3(
+        THREE.MathUtils.lerp(-3.5, 3.35, p),
+        THREE.MathUtils.lerp(5.1, 2.75, p),
+        0.3
+      );
+    }
+    return new THREE.Vector3(0, 4, 0.3);
+  }
+
+  /** Obstacle barriers the Snake must break through, placed on its path */
+  private buildSnakeBarriers() {
+    const barrierSpecs = [
+      { progress: 0.2, colorHex: 0x38bdf8 },
+      { progress: 0.42, colorHex: 0xff5400 },
+      { progress: 0.64, colorHex: 0xa855f7 },
+      { progress: 0.84, colorHex: 0x22c55e },
+    ];
+    barrierSpecs.forEach((spec, index) => {
+      const group = new THREE.Group();
+      const mat = new THREE.MeshPhysicalMaterial({
+        color: spec.colorHex,
+        roughness: 0.2,
+        clearcoat: 0.9,
+      });
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.09, 12, 28), mat);
+      group.add(ring);
+      const bar = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.09, 0.12), mat);
+      group.add(bar);
+      group.position.copy(this.snakePathPoint(spec.progress));
+      group.position.z = 0.3;
+      this.arenaGroup.add(group);
+      this.snakeBarriers.push({ group, index, cleared: false });
+    });
+  }
+
+  /** Red-hot chunks burst off the Snake head whenever a Special Candy hits it */
+  public spawnSnakeHitBurst(count: number = 8) {
+    this.spawnBurstAt(this.snakeHeadPos, 0xff2a5f, count);
+  }
+
+  private spawnBurstAt(pos: THREE.Vector3, colorHex: number, count: number) {
+    let mat = this.burstMats.get(colorHex);
+    if (!mat) {
+      mat = new THREE.MeshPhysicalMaterial({ color: colorHex, roughness: 0.1, clearcoat: 1 });
+      this.burstMats.set(colorHex, mat);
+    }
+    for (let i = 0; i < count; i++) {
+      const mesh = new THREE.Mesh(this.fragGeo, mat);
+      mesh.position.copy(pos);
+      const ang = Math.random() * Math.PI * 2;
+      const spd = 2.4 + Math.random() * 4.0;
+      this.fxGroup.add(mesh);
+      this.fragments.push({
+        mesh,
+        vx: Math.cos(ang) * spd,
+        vy: Math.sin(ang) * spd + 1.2,
+        vz: 1.6 + Math.random() * 2.6,
+        rx: (Math.random() - 0.5) * 14,
+        ry: (Math.random() - 0.5) * 14,
+        life: 0,
+        maxLife: 0.5 + Math.random() * 0.25,
+      });
+    }
+  }
+
+  /** Barriers shrink away when broken; Snake tint follows HP; defeat bursts the Snake apart */
+  private applySnakeCombatVisuals(state: WorldSyncState, dt: number, time: number) {
+    this.snakeHeadPos.copy(this.snakePathPoint(state.danger / 100));
+
+    for (const b of this.snakeBarriers) {
+      const ob = state.snakeObstacles[b.index];
+      if (ob?.cleared && !b.cleared) {
+        b.cleared = true;
+        this.spawnBurstAt(b.group.position, ob.colorHex, 14);
+      }
+      const target = b.cleared ? 0.001 : 1;
+      const k = Math.min(1, dt * 9);
+      const next = THREE.MathUtils.lerp(b.group.scale.x, target, k);
+      b.group.scale.setScalar(next);
+      b.group.visible = next > 0.02;
+      if (!b.cleared) {
+        b.group.rotation.z = Math.sin(time * 2.2 + b.index) * 0.12;
+      }
+    }
+
+    const hpRatio = THREE.MathUtils.clamp(state.snakeHpPct / 100, 0, 1);
+    const hit = state.snakeHitTimer > 0 ? state.snakeHitTimer / 0.26 : 0;
+    const frozen = state.freezeTimer > 0;
+    const base = frozen ? new THREE.Color(0x38bdf8) : new THREE.Color(0xffffff);
+    // Brightness falls with HP so a wounded Snake looks visibly beaten down
+    base.multiplyScalar(0.42 + 0.58 * hpRatio);
+    const hitColor = new THREE.Color(0xff2a5f);
+    const tint = base.clone().lerp(hitColor, hit);
+
+    const rigs = [this.serpentMain, this.serpentTwin];
+    if (state.snakeHpPct <= 0 && this.lastSnakeHpPct > 0) {
+      this.spawnBurstAt(this.snakeHeadPos, 0xff2a5f, 34);
+    }
+    this.lastSnakeHpPct = state.snakeHpPct;
+    for (const rig of rigs) {
+      if (!rig) continue;
+      rig.scaleMat.color.copy(tint);
+      rig.root.visible = state.snakeHpPct > 0;
+    }
   }
 
   public cellToWorld(row: number, col: number): THREE.Vector3 {
@@ -1314,6 +1445,15 @@ export class RescueWorld3D {
       surprisedTimer: state.surprisedTimer,
       isMoving: state.status === 'rescuing',
     });
+
+    this.applySnakeCombatVisuals(state, dt, time);
+
+    // Mochi caught by the Snake: tipped over and jolted (instant death pose)
+    if (state.mochiCaught) {
+      this.mochi.root.rotation.z = THREE.MathUtils.lerp(this.mochi.root.rotation.z, -1.1, Math.min(1, dt * 6));
+      this.mochi.root.position.y -= 0.3;
+      this.mochi.root.position.x += Math.sin(time * 42) * 0.035;
+    }
 
     this.renderer.render(this.scene, this.camera);
   }

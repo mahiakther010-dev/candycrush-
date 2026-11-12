@@ -393,6 +393,59 @@ export interface StepBlastResult {
   poppedPositions: Array<{ row: number; col: number; color: CandyColor }>;
 }
 
+export interface SnakeDamageResult {
+  /** HP percent removed from the Snake (1–100) */
+  percent: number;
+  /** True when the blast is a Mega Board Clear (20+ candies) = instant 100% kill */
+  isMegaKill: boolean;
+}
+
+/**
+ * SNAKE HP DAMAGE — 1% to 100%
+ *  - each candy cleared            +2%
+ *  - each Special Candy burst      +12%
+ *  - each crate/ice/chain/slime    +3%
+ *  - cascade combo (comboIndex)    +5% per step
+ *  - 20+ candies in one blast      = 100% MEGA KILL
+ * Non-mega hits are clamped to 1–99% so only a mega blast or a sequence of hits defeats the Snake.
+ */
+export function calculateSnakeDamage(
+  blast: StepBlastResult,
+  comboIndex: number,
+  damageScale: number = 1
+): SnakeDamageResult {
+  if (blast.totalCandiesCleared >= 20) {
+    return { percent: 100, isMegaKill: true };
+  }
+  const blockersSmashed =
+    blast.cratesBroken + blast.iceBroken + blast.chainsBroken + blast.slimesCleared;
+  if (blast.totalCandiesCleared <= 0 && blast.specialsTriggered <= 0 && blockersSmashed <= 0) {
+    return { percent: 0, isMegaKill: false };
+  }
+  const raw =
+    blast.totalCandiesCleared * 2 +
+    blast.specialsTriggered * 12 +
+    blockersSmashed * 3 +
+    Math.max(0, comboIndex) * 5;
+  const percent = clampRange(Math.round(raw * damageScale), 1, 99);
+  return { percent, isMegaKill: false };
+}
+
+/** Number of candies + blockers smashed by a blast (used to break Snake obstacles) */
+export function countSmashedForObstacles(blast: StepBlastResult): number {
+  return (
+    blast.totalCandiesCleared +
+    blast.cratesBroken +
+    blast.iceBroken +
+    blast.chainsBroken +
+    blast.slimesCleared
+  );
+}
+
+function clampRange(v: number, lo: number, hi: number): number {
+  return Math.min(hi, Math.max(lo, v));
+}
+
 export function createEmptyBlastResult(): StepBlastResult {
   return {
     clearedColors: { red: 0, orange: 0, yellow: 0, green: 0, blue: 0, purple: 0 },

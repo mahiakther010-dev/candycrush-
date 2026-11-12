@@ -147,3 +147,56 @@ export interface PlayerSaveData {
 }
 
 export type GameStatus = 'intro' | 'playing' | 'paused' | 'rescuing' | 'won' | 'lost';
+
+/*
+ * SNAKE COMBAT — HP & touch-death rules
+ * - Snake HP starts at 100% and is chipped down 1% → 100% by candy bursts (see calculateSnakeDamage).
+ * - Snake head touching Mochi (danger meter reaches 100) = Mochi dies instantly.
+ * - Snake HP reaching 0% = Snake defeated = level won.
+ * - Snake must break through obstacles on its path; each obstacle stalls the Snake until
+ *   enough candies are smashed to clear it.
+ */
+export const SNAKE_TOUCH_DANGER = 100;
+/** Danger points the Snake is pushed back per 1% of HP lost */
+export const SNAKE_PUSHBACK_PER_PERCENT = 0.7;
+/** Boss Dragon takes 75% of normal damage (its HP pool is bigger) */
+export const SNAKE_BOSS_DAMAGE_SCALE = 0.75;
+
+export interface SnakeObstacleSpec {
+  /** Position on the Snake path, 0–1 (matches Snake progress) */
+  progress: number;
+  /** Candies/blockers that must be smashed to break this obstacle */
+  cost: number;
+  colorHex: number;
+  labelEn: string;
+  labelBn: string;
+}
+
+export const SNAKE_OBSTACLE_SPECS: SnakeObstacleSpec[] = [
+  { progress: 0.2, cost: 6, colorHex: 0x38bdf8, labelEn: 'Frost Wall', labelBn: 'বরফের দেয়াল' },
+  { progress: 0.42, cost: 8, colorHex: 0xff5400, labelEn: 'Lava Wave', labelBn: 'লাভার ঢেউ' },
+  { progress: 0.64, cost: 10, colorHex: 0xa855f7, labelEn: 'Crystal Barrier', labelBn: 'ক্রিস্টাল বাধা' },
+  { progress: 0.84, cost: 12, colorHex: 0x22c55e, labelEn: 'Thorn Gate', labelBn: 'কাঁটার গেট' },
+];
+
+export interface SnakeObstacleState {
+  index: number;
+  progress: number;
+  colorHex: number;
+  labelEn: string;
+  labelBn: string;
+  remaining: number;
+  cleared: boolean;
+}
+
+export function createSnakeObstacles(isBoss: boolean): SnakeObstacleState[] {
+  return SNAKE_OBSTACLE_SPECS.map((spec, index) => ({
+    index,
+    progress: spec.progress,
+    colorHex: spec.colorHex,
+    labelEn: spec.labelEn,
+    labelBn: spec.labelBn,
+    remaining: isBoss ? Math.round(spec.cost * 1.25) : spec.cost,
+    cleared: false,
+  }));
+}
