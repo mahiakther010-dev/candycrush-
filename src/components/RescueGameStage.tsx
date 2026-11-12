@@ -134,6 +134,7 @@ export const RescueGameStage: React.FC<RescueGameStageProps> = ({
   const mochiCaughtRef = useRef<boolean>(false);
 
   const busyRef = useRef<boolean>(false);
+  const busySinceRef = useRef<number>(0);
   const selectedCellRef = useRef<{ row: number; col: number } | null>(null);
   const dragStartRef = useRef<{
     row: number;
@@ -586,7 +587,7 @@ export const RescueGameStage: React.FC<RescueGameStageProps> = ({
     }
   }, [lang, level.moveLimit, level.pressureMode, showFloatingBanner]);
 
-  const attemptSwap = useCallback(
+  const attemptSwapCore = useCallback(
     async (r1: number, c1: number, r2: number, c2: number) => {
       if (busyRef.current || statusRef.current !== 'playing') return;
       if (!canSwapCells(gridRef.current, r1, c1, r2, c2)) {
@@ -704,6 +705,21 @@ export const RescueGameStage: React.FC<RescueGameStageProps> = ({
     ]
   );
 
+  // Every swap is one transaction: whatever happens inside (even an unexpected error),
+  // the board lock is released so the player is never stuck on a frozen board.
+  const attemptSwap = useCallback(
+    async (r1: number, c1: number, r2: number, c2: number) => {
+      try {
+        await attemptSwapCore(r1, c1, r2, c2);
+      } catch (err) {
+        console.error('Swap failed, board unlocked:', err);
+      } finally {
+        busyRef.current = false;
+      }
+    },
+    [attemptSwapCore]
+  );
+
   const handleTargetedBoardTool = useCallback(
     async (kind: 'hammer' | 'bomb', row: number, col: number) => {
       if (busyRef.current || statusRef.current !== 'playing') return;
@@ -776,6 +792,11 @@ export const RescueGameStage: React.FC<RescueGameStageProps> = ({
     const canvas = canvasRef.current;
     const world = worldRef.current;
     if (!canvas || !world) return;
+    try {
+      canvas.setPointerCapture(e.pointerId);
+    } catch {
+      /* capture is best-effort */
+    }
 
     const hit = world.pointerToGridCell(e.clientX, e.clientY, canvas.getBoundingClientRect());
     if (!hit) {
@@ -811,7 +832,7 @@ export const RescueGameStage: React.FC<RescueGameStageProps> = ({
     const canvas = canvasRef.current;
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
-    const thresholdPx = (rect.width / level.cols) * 0.34;
+    const thresholdPx = Math.max(16, (rect.width / level.cols) * 0.34);
 
     const dx = e.clientX - dragStartRef.current.clientX;
     const dy = e.clientY - dragStartRef.current.clientY;
@@ -954,6 +975,20 @@ export const RescueGameStage: React.FC<RescueGameStageProps> = ({
       const dt = Math.min(0.05, (now - lastTime) / 1000);
       lastTime = now;
       const timeSec = now / 1000;
+
+      // Watchdog: a legit cascade takes ~1-3s. If the lock is held far longer, something failed.
+      if (busyRef.current) {
+        if (busySinceRef.current === 0) busySinceRef.current = now;
+        else if (now - busySinceRef.current > 6000) {
+          console.warn('Board lock stuck >6s, releasing');
+          busyRef.current = false;
+          busySinceRef.current = 0;
+          selectedCellRef.current = null;
+          applyGravityAndRefill(gridRef.current, level.colors, level.submergedFromRow);
+        }
+      } else {
+        busySinceRef.current = 0;
+      }
 
       if (happyTimerRef.current > 0) {
         happyTimerRef.current = Math.max(0, happyTimerRef.current - dt);
@@ -1300,7 +1335,10 @@ export const RescueGameStage: React.FC<RescueGameStageProps> = ({
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
           onPointerCancel={handlePointerUp}
-          className={`max-h-full max-w-full w-auto h-full aspect-[520/770] rounded-3xl border-2 border-amber-300/55 shadow-[0_14px_40px_rgba(0,0,0,0.7)] ${
+          onPointerLeave={handlePointerUp}
+          onContextMenu={(e) => e.preventDefault()}
+          style={{ touchAction: 'none', WebkitTouchCallout: 'none', WebkitUserSelect: 'none' }}
+          className={`touch-none select-none max-h-full max-w-full w-auto h-full aspect-[520/770] rounded-3xl border-2 border-amber-300/55 shadow-[0_14px_40px_rgba(0,0,0,0.7)] ${
             targetTool ? 'cursor-crosshair ring-4 ring-amber-300' : 'cursor-pointer'
           }`}
         />
