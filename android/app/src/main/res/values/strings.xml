@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Candy Rescue Saga</string>
+    <string name="title_activity_main">Candy Rescue Saga</string>
+    <string name="package_name">com.candyrescue.saga</string>
+    <string name="custom_url_scheme">com.candyrescue.saga</string>
+</resources>
