@@ -382,15 +382,13 @@ function getMats(): Record<string, THREE.Material> {
       envMapIntensity: 1.5,
     }),
     slime: new THREE.MeshPhysicalMaterial({
-      color: 0x46f56c,
-      emissive: 0x0f6924,
-      emissiveIntensity: 0.35,
-      roughness: 0.04,
+      color: 0x00e640,
+      roughness: 0.05,
       clearcoat: 1.0,
-      transmission: 0.58,
+      transmission: 0.52,
       thickness: 0.75,
       ior: 1.42,
-      envMapIntensity: 1.9,
+      envMapIntensity: 1.45,
     }),
     contactShadow: new THREE.MeshBasicMaterial({
       color: 0x040711,
@@ -746,8 +744,7 @@ export function createHintHand3D(): THREE.Group {
   const root = new THREE.Group();
 
   const gloveMat = new THREE.MeshPhysicalMaterial({
-    color: 0xfff8f2,
-    emissive: 0x3b2219,
+    color: 0xffffff,
     roughness: 0.16,
     clearcoat: 0.9,
   });

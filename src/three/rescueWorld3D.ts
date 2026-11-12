@@ -354,10 +354,10 @@ export class RescueWorld3D {
     outerTray.receiveShadow = true;
     this.boardGroup.add(outerTray);
 
-    // Rich Royal-Cobalt Board Backing
+    // Rich Royal-Berry Velvet Inner Backing Border
     const innerMat = new THREE.MeshPhysicalMaterial({
-      color: 0x172554,
-      roughness: 0.38,
+      color: 0x6b21a8,
+      roughness: 0.36,
       clearcoat: 0.25,
     });
     const innerTray = new THREE.Mesh(
@@ -368,34 +368,35 @@ export class RescueWorld3D {
     innerTray.receiveShadow = true;
     this.boardGroup.add(innerTray);
 
-    // Crisp Vibrant Sapphire & Royal-Blue Checkerboard Tile Wells
+    // Classic High-Contrast Candy-Crush / Royal-Match Porcelain Wafer Checkerboard Tiles!
+    // Warm Vanilla-Cream & Soft Sky-Lavender make ALL 6 candy colors (including Blue & Purple) POP!
     const tileLight = new THREE.MeshPhysicalMaterial({
-      color: 0x2563eb,
-      roughness: 0.26,
-      clearcoat: 0.55,
-      envMapIntensity: 1.2,
+      color: 0xfff6e8,
+      roughness: 0.24,
+      clearcoat: 0.5,
+      envMapIntensity: 0.9,
     });
     const tileDark = new THREE.MeshPhysicalMaterial({
-      color: 0x1d4ed8,
-      roughness: 0.3,
-      clearcoat: 0.5,
-      envMapIntensity: 1.15,
+      color: 0xdbeafe,
+      roughness: 0.28,
+      clearcoat: 0.45,
+      envMapIntensity: 0.9,
     });
     const tileDrain = new THREE.MeshPhysicalMaterial({
-      color: 0xd97706,
-      roughness: 0.25,
-      metalness: 0.25,
-      clearcoat: 0.75,
+      color: 0xffd166,
+      roughness: 0.24,
+      metalness: 0.15,
+      clearcoat: 0.65,
     });
     const tileFlood = new THREE.MeshPhysicalMaterial({
-      color: 0x0096c7,
+      color: 0x38bdf8,
       roughness: 0.12,
-      clearcoat: 0.95,
+      clearcoat: 0.9,
     });
     const tileWind = new THREE.MeshPhysicalMaterial({
-      color: 0x00bfa5,
+      color: 0x6ee7b7,
       roughness: 0.22,
-      clearcoat: 0.8,
+      clearcoat: 0.75,
     });
     const tileGeo = new RoundedBoxGeometry(TILE_PITCH * 0.92, TILE_PITCH * 0.92, 0.09, 3, 0.03);
     const arrowGeo = new THREE.ConeGeometry(0.12, 0.2, 6);
@@ -666,8 +667,7 @@ export class RescueWorld3D {
         const plank = new THREE.Mesh(
           new RoundedBoxGeometry(0.96, 0.26, 0.62, 3, 0.05),
           new THREE.MeshPhysicalMaterial({
-            color: 0xffcf33,
-            emissive: 0x6b3c00,
+            color: 0xffbe0b,
             roughness: 0.18,
             clearcoat: 0.9,
           })
@@ -727,8 +727,7 @@ export class RescueWorld3D {
       const turretCore = new THREE.Mesh(
         new THREE.OctahedronGeometry(0.36, 1),
         new THREE.MeshPhysicalMaterial({
-          color: 0x38bdf8,
-          emissive: 0x0284c7,
+          color: 0x00bbf9,
           roughness: 0.06,
           clearcoat: 1,
         })

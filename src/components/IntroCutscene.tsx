@@ -113,9 +113,9 @@ export const IntroCutscene: React.FC<IntroCutsceneProps> = ({ lang, onComplete }
     const arch = new THREE.Mesh(
       new THREE.TorusGeometry(0.95, 0.18, 14, 32),
       new THREE.MeshPhysicalMaterial({
-        color: 0xff9f1c,
-        emissive: 0x5c2800,
+        color: 0xffbe0b,
         roughness: 0.18,
+        metalness: 0.55,
         clearcoat: 1,
       })
     );
