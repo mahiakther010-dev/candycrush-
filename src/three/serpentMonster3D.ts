@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { getProceduralPBRMaps } from './proceduralTextures3D';
 
 export interface SerpentRig3D {
   root: THREE.Group;
@@ -16,30 +17,38 @@ export interface SerpentRig3D {
 
 export function createSerpentRig3D(numSegments: number = 22, isBoss: boolean = false): SerpentRig3D {
   const root = new THREE.Group();
+  const maps = getProceduralPBRMaps();
 
   const scaleMat = new THREE.MeshPhysicalMaterial({
-    color: isBoss ? 0x16a34a : 0x43b518,
-    emissive: isBoss ? 0x052e16 : 0x113604,
-    roughness: 0.16,
-    metalness: 0.08,
-    clearcoat: 0.95,
-    clearcoatRoughness: 0.1,
+    color: isBoss ? 0x16a34a : 0x3db814,
+    emissive: isBoss ? 0x052e16 : 0x0f3303,
+    roughness: 0.14,
+    metalness: 0.12,
+    clearcoat: 1.0,
+    clearcoatRoughness: 0.08,
+    normalMap: maps.reptileScaleNormal,
+    normalScale: new THREE.Vector2(0.82, 0.82),
+    iridescence: 0.45,
+    iridescenceIOR: 1.38,
+    envMapIntensity: 1.85,
   });
 
   const bellyMat = new THREE.MeshPhysicalMaterial({
     color: 0xbef264,
     emissive: 0x284705,
-    roughness: 0.22,
-    clearcoat: 0.7,
+    roughness: 0.2,
+    clearcoat: 0.8,
+    sheen: 0.45,
   });
 
   const fangMat = new THREE.MeshPhysicalMaterial({
     color: 0xffffff,
-    roughness: 0.1,
-    clearcoat: 0.9,
+    roughness: 0.06,
+    clearcoat: 1.0,
+    envMapIntensity: 1.8,
   });
 
-  const eyeMat = new THREE.MeshBasicMaterial({ color: 0xffe600 });
+  const eyeMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(2.0, 1.65, 0.1) });
   const pupilMat = new THREE.MeshBasicMaterial({ color: 0x5c0512 });
   const goldMat = new THREE.MeshPhysicalMaterial({
     color: 0xffd026,
@@ -162,6 +171,12 @@ export function createSerpentRig3D(numSegments: number = 22, isBoss: boolean = f
   frontRuby.position.set(0, 0.02, 0.19);
   crownGroup.add(frontRuby);
   upperJaw.add(crownGroup);
+
+  root.traverse((obj) => {
+    if ((obj as THREE.Mesh).isMesh) {
+      obj.castShadow = true;
+    }
+  });
 
   return {
     root,

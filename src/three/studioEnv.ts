@@ -4,92 +4,107 @@ export interface StudioLights {
   ambient: THREE.HemisphereLight;
   keyLight: THREE.DirectionalLight;
   rimLight: THREE.DirectionalLight;
+  bounceLight: THREE.DirectionalLight;
   dangerLight: THREE.PointLight;
   portalLight: THREE.PointLight;
 }
 
 /**
- * Generates a bright, candy-studio HDR-like environment texture using PMREMGenerator
- * so glossy clearcoat candies, crystals, wrappers, gold keys, and Mochi's eyes
- * display crisp studio specular highlights and subtle ambient bounce.
+ * Generates an Octane / Cinema-4D style multi-softbox HDR environment map using PMREMGenerator.
+ * High-contrast studio light panels + horizon gradient create razor-sharp wet sugar reflections
+ * and realistic glass/jelly refraction on every 3D candy, ice block, gold key, and character eye.
  */
 export function createCandyStudioEnvironment(renderer: THREE.WebGLRenderer): THREE.Texture {
   const pmrem = new THREE.PMREMGenerator(renderer);
   pmrem.compileEquirectangularShader();
 
   const envScene = new THREE.Scene();
-  envScene.background = new THREE.Color('#1c2848');
+  envScene.background = new THREE.Color('#12192e');
 
-  // Overhead bright softbox panel (gives crisp white glossy candy highlights!)
-  const topSoftbox = new THREE.Mesh(
-    new THREE.PlaneGeometry(28, 18),
-    new THREE.MeshBasicMaterial({ color: new THREE.Color(2.6, 2.55, 2.5), side: THREE.DoubleSide })
+  // 1. Primary Overhead Octabox (creates signature glossy white top highlight on candies)
+  const mainOctabox = new THREE.Mesh(
+    new THREE.CircleGeometry(11, 32),
+    new THREE.MeshBasicMaterial({ color: new THREE.Color(3.6, 3.5, 3.35), side: THREE.DoubleSide })
   );
-  topSoftbox.position.set(-3, 14, 8);
-  topSoftbox.lookAt(0, 0, 0);
-  envScene.add(topSoftbox);
+  mainOctabox.position.set(-4, 15, 9);
+  mainOctabox.lookAt(0, 0, 0);
+  envScene.add(mainOctabox);
 
-  // Secondary key softbox (front-left)
-  const keyCard = new THREE.Mesh(
-    new THREE.PlaneGeometry(16, 12),
-    new THREE.MeshBasicMaterial({ color: new THREE.Color(2.2, 2.0, 2.1), side: THREE.DoubleSide })
+  // 2. Crisp Strip-Box Window Light (front-left specular strip)
+  const stripLeft = new THREE.Mesh(
+    new THREE.PlaneGeometry(5.5, 20),
+    new THREE.MeshBasicMaterial({ color: new THREE.Color(3.1, 2.95, 3.0), side: THREE.DoubleSide })
   );
-  keyCard.position.set(-12, 7, 12);
-  keyCard.lookAt(0, 0, 0);
-  envScene.add(keyCard);
+  stripLeft.position.set(-14, 6, 11);
+  stripLeft.lookAt(0, 0, 0);
+  envScene.add(stripLeft);
 
-  // Warm candy-pink & gold bounce reflector (right)
-  const warmCard = new THREE.Mesh(
-    new THREE.PlaneGeometry(18, 12),
-    new THREE.MeshBasicMaterial({ color: new THREE.Color(1.7, 1.05, 1.35), side: THREE.DoubleSide })
+  // 3. Warm Golden-Sunset Rim Reflector (right)
+  const warmBounce = new THREE.Mesh(
+    new THREE.PlaneGeometry(18, 14),
+    new THREE.MeshBasicMaterial({ color: new THREE.Color(2.3, 1.45, 0.95), side: THREE.DoubleSide })
   );
-  warmCard.position.set(13, 4, 9);
-  warmCard.lookAt(0, 0, 0);
-  envScene.add(warmCard);
+  warmBounce.position.set(14, 4, 8);
+  warmBounce.lookAt(0, 0, 0);
+  envScene.add(warmBounce);
 
-  // Cool sky-cyan rim card (top-back)
-  const rimCard = new THREE.Mesh(
-    new THREE.PlaneGeometry(26, 10),
-    new THREE.MeshBasicMaterial({ color: new THREE.Color(0.85, 1.55, 2.2), side: THREE.DoubleSide })
+  // 4. Cool Sapphire-Cyan Back Rim Strip (separates 3D silhouettes from backdrop)
+  const coolRim = new THREE.Mesh(
+    new THREE.PlaneGeometry(28, 9),
+    new THREE.MeshBasicMaterial({ color: new THREE.Color(0.95, 2.0, 2.9), side: THREE.DoubleSide })
   );
-  rimCard.position.set(0, 10, -13);
-  rimCard.lookAt(0, 0, 0);
-  envScene.add(rimCard);
+  coolRim.position.set(0, 11, -14);
+  coolRim.lookAt(0, 0, 0);
+  envScene.add(coolRim);
 
-  const envRT = pmrem.fromScene(envScene, 0.035);
+  // 5. Subtle Lower Table Bounce Card (illuminates bottom bevels of candies)
+  const floorCard = new THREE.Mesh(
+    new THREE.PlaneGeometry(24, 18),
+    new THREE.MeshBasicMaterial({ color: new THREE.Color(0.8, 0.55, 0.95), side: THREE.DoubleSide })
+  );
+  floorCard.position.set(0, -14, 6);
+  floorCard.lookAt(0, 0, 0);
+  envScene.add(floorCard);
+
+  const envRT = pmrem.fromScene(envScene, 0.022);
   pmrem.dispose();
   return envRT.texture;
 }
 
 export function setupCinematicLights(scene: THREE.Scene): StudioLights {
-  const ambient = new THREE.HemisphereLight('#d8eeff', '#2a1842', 0.95);
+  const ambient = new THREE.HemisphereLight('#e6f4ff', '#28163d', 0.92);
   scene.add(ambient);
 
-  const keyLight = new THREE.DirectionalLight('#fff8eb', 2.05);
-  keyLight.position.set(-5.5, 11.5, 13.5);
+  const keyLight = new THREE.DirectionalLight('#fff6e5', 2.35);
+  keyLight.position.set(-6.2, 12.5, 14.2);
   keyLight.castShadow = true;
-  keyLight.shadow.mapSize.set(1024, 1024);
+  keyLight.shadow.mapSize.set(2048, 2048);
   keyLight.shadow.camera.near = 2;
-  keyLight.shadow.camera.far = 32;
-  keyLight.shadow.camera.left = -8.5;
-  keyLight.shadow.camera.right = 8.5;
-  keyLight.shadow.camera.top = 11;
-  keyLight.shadow.camera.bottom = -11;
-  keyLight.shadow.bias = -0.0008;
-  keyLight.shadow.radius = 3.5;
+  keyLight.shadow.camera.far = 34;
+  keyLight.shadow.camera.left = -9.0;
+  keyLight.shadow.camera.right = 9.0;
+  keyLight.shadow.camera.top = 11.5;
+  keyLight.shadow.camera.bottom = -11.5;
+  keyLight.shadow.bias = -0.0005;
+  keyLight.shadow.normalBias = 0.02;
+  keyLight.shadow.radius = 3.2;
   scene.add(keyLight);
 
-  const rimLight = new THREE.DirectionalLight('#7dd3fc', 1.05);
-  rimLight.position.set(7.5, 6.5, -6);
+  const rimLight = new THREE.DirectionalLight('#7dd3fc', 1.25);
+  rimLight.position.set(8.0, 7.5, -6.5);
   scene.add(rimLight);
 
-  const dangerLight = new THREE.PointLight('#ff2a4b', 0, 14, 1.6);
-  dangerLight.position.set(0, 3.8, 3.2);
+  const bounceLight = new THREE.DirectionalLight('#ffbe76', 0.55);
+  bounceLight.position.set(2.5, -9.0, 8.0);
+  scene.add(bounceLight);
+
+  const dangerLight = new THREE.PointLight('#ff244c', 0, 15, 1.5);
+  dangerLight.position.set(0, 3.8, 3.4);
   scene.add(dangerLight);
 
-  const portalLight = new THREE.PointLight('#ffd166', 1.8, 9, 1.8);
-  portalLight.position.set(-2.5, 5.2, 1.5);
+  const portalLight = new THREE.PointLight('#ffd166', 2.2, 10, 1.7);
+  portalLight.position.set(-2.5, 5.2, 1.6);
   scene.add(portalLight);
 
-  return { ambient, keyLight, rimLight, dangerLight, portalLight };
+  return { ambient, keyLight, rimLight, bounceLight, dangerLight, portalLight };
 }

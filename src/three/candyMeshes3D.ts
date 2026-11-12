@@ -1,5 +1,7 @@
 import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { BlockerType, CandyColor, SpecialType } from '../types/game';
+import { getProceduralPBRMaps } from './proceduralTextures3D';
 
 export const CANDY_HEX: Record<CandyColor, number> = {
   red: 0xff1e4d,
@@ -21,18 +23,20 @@ export const CANDY_EMISSIVE_HEX: Record<CandyColor, number> = {
 
 interface GeometryLibrary {
   strawberryBody: THREE.BufferGeometry;
+  innerGlowCore: THREE.SphereGeometry;
   strawberrySeed: THREE.BufferGeometry;
   leaf: THREE.BufferGeometry;
   crystalBody: THREE.BufferGeometry;
   crystalInner: THREE.BufferGeometry;
   lemonBody: THREE.BufferGeometry;
   appleBody: THREE.BufferGeometry;
-  appleStem: THREE.BufferGeometry;
-  grapeSphere: THREE.BufferGeometry;
+  appleStem: THREE.CylinderGeometry;
+  grapeSphere: THREE.SphereGeometry;
+  dewDrop: THREE.SphereGeometry;
   caramelBase: THREE.BufferGeometry;
   caramelSwirl: THREE.TorusGeometry;
   stripeBand: THREE.TorusGeometry;
-  wrapperBox: THREE.BufferGeometry;
+  wrapperBox: RoundedBoxGeometry;
   wrapperFlute: THREE.CylinderGeometry;
   bombSphere: THREE.SphereGeometry;
   bombVent: THREE.CylinderGeometry;
@@ -41,11 +45,11 @@ interface GeometryLibrary {
   rainbowHalo: THREE.TorusGeometry;
   keyRing: THREE.TorusGeometry;
   keyShaft: THREE.CylinderGeometry;
-  keyBit: THREE.BoxGeometry;
-  crateBox: THREE.BoxGeometry;
-  cratePlank: THREE.BoxGeometry;
-  iceBox: THREE.BoxGeometry;
-  chainBar: THREE.CylinderGeometry;
+  keyBit: RoundedBoxGeometry;
+  crateBox: RoundedBoxGeometry;
+  cratePlank: RoundedBoxGeometry;
+  iceBox: RoundedBoxGeometry;
+  chainLink: THREE.TorusGeometry;
   slimeDome: THREE.SphereGeometry;
   shadowDisc: THREE.CircleGeometry;
 }
@@ -55,120 +59,105 @@ let cachedMats: Record<string, THREE.Material> | null = null;
 
 function buildLatheStrawberry(): THREE.BufferGeometry {
   const pts: THREE.Vector2[] = [];
-  const steps = 20;
+  const steps = 28;
   for (let i = 0; i <= steps; i++) {
-    const t = i / steps; // 0 bottom tip -> 1 top crown
-    const y = (t - 0.48) * 0.78;
-    // Plump tapered strawberry profile: narrow bottom tip, wide upper shoulder
+    const t = i / steps;
+    const y = (t - 0.48) * 0.8;
     const r =
       Math.sin(t * Math.PI) *
-      (0.24 + 0.21 * Math.pow(t, 0.75)) *
-      (t > 0.88 ? 1 - (t - 0.88) * 1.4 : 1);
+      (0.25 + 0.21 * Math.pow(t, 0.74)) *
+      (t > 0.88 ? 1 - (t - 0.88) * 1.35 : 1);
     pts.push(new THREE.Vector2(Math.max(0.001, r), y));
   }
-  const geo = new THREE.LatheGeometry(pts, 28);
+  const geo = new THREE.LatheGeometry(pts, 36);
   geo.computeVertexNormals();
   return geo;
 }
 
-function buildLatheLemon(): THREE.BufferGeometry {
+function buildLatheMangoDrop(): THREE.BufferGeometry {
   const pts: THREE.Vector2[] = [];
-  const steps = 22;
+  const steps = 28;
   for (let i = 0; i <= steps; i++) {
     const t = i / steps;
-    const u = t * 2 - 1; // -1..1
+    const u = t * 2 - 1;
     const y = u * 0.43;
-    // Signature citrus lemon silhouette with cute nipple tips at both poles
-    const base = Math.sqrt(Math.max(0, 1 - u * u)) * 0.34;
-    const tipBoost = Math.exp(-Math.pow((Math.abs(u) - 0.86) * 7, 2)) * 0.045;
+    const base = Math.sqrt(Math.max(0, 1 - u * u)) * (0.35 + u * 0.035);
+    const tipBoost = Math.exp(-Math.pow((Math.abs(u) - 0.86) * 7, 2)) * 0.042;
     pts.push(new THREE.Vector2(Math.max(0.002, base + tipBoost), y));
   }
-  const geo = new THREE.LatheGeometry(pts, 26);
-  geo.rotateZ(0.45);
+  const geo = new THREE.LatheGeometry(pts, 36);
+  geo.rotateZ(0.42);
   geo.computeVertexNormals();
   return geo;
 }
 
 function buildLatheApple(): THREE.BufferGeometry {
   const pts: THREE.Vector2[] = [];
-  const steps = 22;
+  const steps = 28;
   for (let i = 0; i <= steps; i++) {
     const t = i / steps;
-    const ang = t * Math.PI; // 0 bottom -> PI top
+    const ang = t * Math.PI;
     const sinA = Math.sin(ang);
     const cosA = Math.cos(ang);
-    // Dimpled apple crown and base
-    const r = 0.02 + sinA * (0.37 + 0.06 * Math.sin(ang * 0.85));
-    const dimple = Math.pow(Math.abs(cosA), 6) * 0.085;
+    const r = 0.02 + sinA * (0.375 + 0.06 * Math.sin(ang * 0.85));
+    const dimple = Math.pow(Math.abs(cosA), 6) * 0.088;
     const y = -cosA * 0.36 + (cosA > 0 ? dimple : -dimple * 1.2);
     pts.push(new THREE.Vector2(r, y));
   }
-  const geo = new THREE.LatheGeometry(pts, 28);
+  const geo = new THREE.LatheGeometry(pts, 36);
   geo.computeVertexNormals();
   return geo;
 }
 
 function buildCaramelCushion(): THREE.BufferGeometry {
-  const pts: THREE.Vector2[] = [];
-  const steps = 18;
-  for (let i = 0; i <= steps; i++) {
-    const t = i / steps;
-    const ang = t * Math.PI;
-    const r = Math.sin(ang) * 0.39;
-    const y = -Math.cos(ang) * 0.25;
-    pts.push(new THREE.Vector2(Math.max(0.002, r), y));
-  }
-  const geo = new THREE.LatheGeometry(pts, 28);
-  geo.rotateX(Math.PI * 0.35);
-  geo.computeVertexNormals();
+  const geo = new RoundedBoxGeometry(0.74, 0.74, 0.42, 5, 0.16);
   return geo;
 }
 
 function getGeos(): GeometryLibrary {
   if (cachedGeos) return cachedGeos;
 
-  const crystalBody = new THREE.OctahedronGeometry(0.41, 1);
+  const crystalBody = new THREE.OctahedronGeometry(0.42, 2);
   crystalBody.scale(0.88, 1.08, 0.72);
   crystalBody.computeVertexNormals();
 
   const crystalInner = new THREE.OctahedronGeometry(0.24, 0);
   crystalInner.scale(0.85, 1.1, 0.7);
 
-  const leaf = new THREE.SphereGeometry(0.11, 12, 8);
-  leaf.scale(1.35, 0.28, 0.65);
-
-  const wrapperBox = new THREE.SphereGeometry(0.44, 20, 16);
-  wrapperBox.scale(1.06, 0.96, 0.78);
+  const leaf = new THREE.SphereGeometry(0.11, 14, 10);
+  leaf.scale(1.38, 0.25, 0.65);
 
   cachedGeos = {
     strawberryBody: buildLatheStrawberry(),
-    strawberrySeed: new THREE.SphereGeometry(0.024, 6, 6),
+    innerGlowCore: new THREE.SphereGeometry(0.18, 14, 12),
+    strawberrySeed: new THREE.SphereGeometry(0.023, 8, 8),
     leaf,
     crystalBody,
     crystalInner,
-    lemonBody: buildLatheLemon(),
+    lemonBody: buildLatheMangoDrop(),
     appleBody: buildLatheApple(),
-    appleStem: new THREE.CylinderGeometry(0.022, 0.032, 0.15, 8),
-    grapeSphere: new THREE.SphereGeometry(0.165, 16, 14),
+    appleStem: new THREE.CylinderGeometry(0.022, 0.032, 0.16, 10),
+    grapeSphere: new THREE.SphereGeometry(0.17, 20, 18),
+    dewDrop: new THREE.SphereGeometry(0.032, 8, 8),
     caramelBase: buildCaramelCushion(),
-    caramelSwirl: new THREE.TorusGeometry(0.17, 0.042, 12, 26, Math.PI * 1.75),
-    stripeBand: new THREE.TorusGeometry(0.37, 0.046, 10, 28),
-    wrapperBox,
-    wrapperFlute: new THREE.CylinderGeometry(0.06, 0.22, 0.22, 12, 1, false),
-    bombSphere: new THREE.SphereGeometry(0.38, 24, 20),
-    bombVent: new THREE.CylinderGeometry(0.08, 0.08, 0.08, 12),
-    rainbowSphere: new THREE.SphereGeometry(0.39, 26, 22),
-    rainbowGem: new THREE.OctahedronGeometry(0.088, 0),
-    rainbowHalo: new THREE.TorusGeometry(0.46, 0.024, 10, 36),
-    keyRing: new THREE.TorusGeometry(0.16, 0.052, 12, 24),
-    keyShaft: new THREE.CylinderGeometry(0.045, 0.045, 0.44, 12),
-    keyBit: new THREE.BoxGeometry(0.13, 0.055, 0.05),
-    crateBox: new THREE.BoxGeometry(0.86, 0.86, 0.36),
-    cratePlank: new THREE.BoxGeometry(0.88, 0.13, 0.4),
-    iceBox: new THREE.BoxGeometry(0.88, 0.88, 0.56),
-    chainBar: new THREE.CylinderGeometry(0.045, 0.045, 0.96, 10),
-    slimeDome: new THREE.SphereGeometry(0.45, 20, 16),
-    shadowDisc: new THREE.CircleGeometry(0.39, 20),
+    caramelSwirl: new THREE.TorusGeometry(0.185, 0.046, 14, 36, Math.PI * 1.85),
+    stripeBand: new THREE.TorusGeometry(0.375, 0.045, 12, 34),
+    wrapperBox: new RoundedBoxGeometry(0.84, 0.78, 0.62, 4, 0.16),
+    wrapperFlute: new THREE.CylinderGeometry(0.05, 0.23, 0.23, 14, 1, false),
+    bombSphere: new THREE.SphereGeometry(0.38, 28, 24),
+    bombVent: new THREE.CylinderGeometry(0.08, 0.08, 0.08, 14),
+    rainbowSphere: new THREE.SphereGeometry(0.39, 32, 26),
+    rainbowGem: new THREE.OctahedronGeometry(0.09, 0),
+    rainbowHalo: new THREE.TorusGeometry(0.46, 0.025, 12, 40),
+    keyRing: new THREE.TorusGeometry(0.165, 0.054, 14, 28),
+    keyShaft: new THREE.CylinderGeometry(0.046, 0.046, 0.44, 14),
+    keyBit: new RoundedBoxGeometry(0.14, 0.06, 0.055, 2, 0.015),
+    crateBox: new RoundedBoxGeometry(0.86, 0.86, 0.38, 3, 0.07),
+    cratePlank: new RoundedBoxGeometry(0.88, 0.13, 0.42, 2, 0.03),
+    iceBox: new RoundedBoxGeometry(0.88, 0.88, 0.58, 4, 0.1),
+    chainLink: new THREE.TorusGeometry(0.13, 0.038, 10, 20),
+    slimeDome: new THREE.SphereGeometry(0.45, 26, 20),
+    shadowDisc: new THREE.CircleGeometry(0.4, 24),
   };
 
   return cachedGeos;
@@ -176,185 +165,273 @@ function getGeos(): GeometryLibrary {
 
 function getMats(): Record<string, THREE.Material> {
   if (cachedMats) return cachedMats;
+  const maps = getProceduralPBRMaps();
 
   cachedMats = {
+    // Translucent Photorealistic Ruby Jelly / Litchi-Berry Glaze
     red: new THREE.MeshPhysicalMaterial({
-      color: 0xff1744,
-      emissive: 0x4a0313,
-      roughness: 0.1,
-      metalness: 0.04,
-      clearcoat: 1.0,
-      clearcoatRoughness: 0.06,
-      reflectivity: 1.0,
-    }),
-    blue: new THREE.MeshPhysicalMaterial({
-      color: 0x00a8ff,
-      emissive: 0x053769,
+      color: 0xff1244,
+      emissive: 0x5c0419,
+      emissiveIntensity: 0.42,
       roughness: 0.05,
-      metalness: 0.08,
-      clearcoat: 1.0,
-      clearcoatRoughness: 0.03,
-      transmission: 0.25,
-      thickness: 0.8,
-      ior: 1.52,
-    }),
-    blueCore: new THREE.MeshBasicMaterial({
-      color: 0xbaf0ff,
-      transparent: true,
-      opacity: 0.72,
-    }),
-    yellow: new THREE.MeshPhysicalMaterial({
-      color: 0xffd000,
-      emissive: 0x573b00,
-      roughness: 0.11,
       metalness: 0.02,
       clearcoat: 1.0,
-      clearcoatRoughness: 0.07,
+      clearcoatRoughness: 0.03,
+      normalMap: maps.citrusNormal,
+      normalScale: new THREE.Vector2(0.16, 0.16),
+      iridescence: 0.22,
+      iridescenceIOR: 1.35,
+      specularIntensity: 1.25,
+      envMapIntensity: 1.75,
     }),
+    redInner: new THREE.MeshBasicMaterial({
+      color: 0xff8fab,
+      transparent: true,
+      opacity: 0.55,
+    }),
+    // True Refractive Sapphire Crystal Gem
+    blue: new THREE.MeshPhysicalMaterial({
+      color: 0x00b4ff,
+      emissive: 0x043d75,
+      emissiveIntensity: 0.38,
+      roughness: 0.02,
+      metalness: 0.06,
+      clearcoat: 1.0,
+      clearcoatRoughness: 0.01,
+      transmission: 0.62,
+      thickness: 1.05,
+      ior: 1.56,
+      attenuationColor: new THREE.Color(0x0077ff),
+      attenuationDistance: 0.9,
+      iridescence: 0.55,
+      envMapIntensity: 2.0,
+    }),
+    blueCore: new THREE.MeshBasicMaterial({
+      color: 0xe0f7ff,
+      transparent: true,
+      opacity: 0.88,
+    }),
+    // Golden Himsagar Mango / Citrus Jelly Drop with Pore Micro-Normal
+    yellow: new THREE.MeshPhysicalMaterial({
+      color: 0xffc800,
+      emissive: 0x694200,
+      emissiveIntensity: 0.4,
+      roughness: 0.06,
+      metalness: 0.02,
+      clearcoat: 1.0,
+      clearcoatRoughness: 0.04,
+      normalMap: maps.citrusNormal,
+      normalScale: new THREE.Vector2(0.24, 0.24),
+      sheen: 0.35,
+      sheenColor: new THREE.Color(0xfff3b0),
+      specularIntensity: 1.2,
+      envMapIntensity: 1.7,
+    }),
+    // Crisp Wet-Glazed Emerald Guava / Apple Candy
     green: new THREE.MeshPhysicalMaterial({
-      color: 0x25d336,
-      emissive: 0x074011,
-      roughness: 0.09,
-      metalness: 0.03,
+      color: 0x1ee63b,
+      emissive: 0x064d14,
+      emissiveIntensity: 0.38,
+      roughness: 0.05,
+      metalness: 0.02,
       clearcoat: 1.0,
-      clearcoatRoughness: 0.05,
+      clearcoatRoughness: 0.03,
+      iridescence: 0.18,
+      specularIntensity: 1.25,
+      envMapIntensity: 1.75,
     }),
+    // Royal Jamun-Grape Cluster with Satin Dew Sheen
     purple: new THREE.MeshPhysicalMaterial({
-      color: 0xa838ff,
-      emissive: 0x300659,
-      roughness: 0.09,
-      metalness: 0.05,
-      clearcoat: 1.0,
-      clearcoatRoughness: 0.05,
-    }),
-    orange: new THREE.MeshPhysicalMaterial({
-      color: 0xff7b0f,
-      emissive: 0x541d00,
-      roughness: 0.11,
+      color: 0x9d2bff,
+      emissive: 0x340563,
+      emissiveIntensity: 0.42,
+      roughness: 0.05,
       metalness: 0.04,
       clearcoat: 1.0,
-      clearcoatRoughness: 0.06,
+      clearcoatRoughness: 0.03,
+      sheen: 0.65,
+      sheenColor: new THREE.Color(0xf3d4ff),
+      iridescence: 0.32,
+      envMapIntensity: 1.8,
+    }),
+    // Warm Saffron Jilapi / Butterscotch Cushion
+    orange: new THREE.MeshPhysicalMaterial({
+      color: 0xff7300,
+      emissive: 0x632000,
+      emissiveIntensity: 0.4,
+      roughness: 0.06,
+      metalness: 0.03,
+      clearcoat: 1.0,
+      clearcoatRoughness: 0.04,
+      normalMap: maps.citrusNormal,
+      normalScale: new THREE.Vector2(0.14, 0.14),
+      envMapIntensity: 1.75,
     }),
     creamSwirl: new THREE.MeshPhysicalMaterial({
-      color: 0xfff3d6,
-      emissive: 0x452b09,
-      roughness: 0.14,
-      clearcoat: 0.95,
+      color: 0xfff6e0,
+      emissive: 0x57380c,
+      emissiveIntensity: 0.35,
+      roughness: 0.08,
+      clearcoat: 1.0,
+      envMapIntensity: 1.6,
+    }),
+    waterDrop: new THREE.MeshPhysicalMaterial({
+      color: 0xffffff,
+      roughness: 0.0,
+      clearcoat: 1.0,
+      transmission: 0.85,
+      ior: 1.33,
+      envMapIntensity: 2.2,
     }),
     leaf: new THREE.MeshPhysicalMaterial({
-      color: 0x38e048,
-      emissive: 0x0a3d10,
-      roughness: 0.18,
-      clearcoat: 0.8,
+      color: 0x32de43,
+      emissive: 0x094010,
+      roughness: 0.16,
+      clearcoat: 0.9,
     }),
     stem: new THREE.MeshStandardMaterial({
-      color: 0x6b3e1b,
-      roughness: 0.55,
+      color: 0x5e3414,
+      roughness: 0.5,
     }),
-    seed: new THREE.MeshStandardMaterial({
-      color: 0xffe066,
-      emissive: 0x594300,
-      roughness: 0.25,
+    seed: new THREE.MeshPhysicalMaterial({
+      color: 0xffe678,
+      emissive: 0x664d00,
+      roughness: 0.18,
+      metalness: 0.35,
+      clearcoat: 0.9,
     }),
     stripeGlow: new THREE.MeshPhysicalMaterial({
       color: 0xffffff,
-      emissive: 0xfff0b3,
-      emissiveIntensity: 0.55,
-      roughness: 0.1,
+      emissive: 0xfff3bd,
+      emissiveIntensity: 1.35, // Triggers HDR UnrealBloom!
+      roughness: 0.08,
       clearcoat: 1.0,
     }),
     wrapperShell: new THREE.MeshPhysicalMaterial({
       color: 0xffffff,
       emissive: 0xffb3d9,
-      emissiveIntensity: 0.22,
+      emissiveIntensity: 0.25,
       transparent: true,
       opacity: 0.42,
-      roughness: 0.04,
+      roughness: 0.02,
       clearcoat: 1.0,
+      iridescence: 0.85,
+      iridescenceIOR: 1.4,
+      envMapIntensity: 2.1,
       side: THREE.DoubleSide,
     }),
     bombCore: new THREE.MeshPhysicalMaterial({
-      color: 0x261738,
+      color: 0x1c102b,
       emissive: 0x450a29,
-      roughness: 0.18,
-      metalness: 0.72,
-      clearcoat: 1.0,
-    }),
-    bombEnergy: new THREE.MeshBasicMaterial({
-      color: 0xff5e1a,
-    }),
-    rainbowBody: new THREE.MeshPhysicalMaterial({
-      color: 0x2e1527,
-      emissive: 0x1c0824,
       roughness: 0.12,
-      metalness: 0.35,
-      clearcoat: 1.0,
-    }),
-    rainbowRing: new THREE.MeshBasicMaterial({
-      color: 0xffe680,
-      transparent: true,
-      opacity: 0.82,
-    }),
-    gold: new THREE.MeshPhysicalMaterial({
-      color: 0xffcf33,
-      emissive: 0x5e3b00,
-      roughness: 0.16,
       metalness: 0.85,
       clearcoat: 1.0,
+      envMapIntensity: 1.9,
+    }),
+    bombEnergy: new THREE.MeshBasicMaterial({
+      color: new THREE.Color(2.4, 0.85, 0.2), // HDR bloom core!
+    }),
+    rainbowBody: new THREE.MeshPhysicalMaterial({
+      color: 0x240e21,
+      emissive: 0x21082b,
+      roughness: 0.08,
+      metalness: 0.55,
+      clearcoat: 1.0,
+      iridescence: 0.75,
+      envMapIntensity: 2.0,
+    }),
+    rainbowRing: new THREE.MeshBasicMaterial({
+      color: new THREE.Color(2.1, 1.75, 0.65),
+      transparent: true,
+      opacity: 0.88,
+    }),
+    gold: new THREE.MeshPhysicalMaterial({
+      color: 0xffd43b,
+      emissive: 0x664000,
+      emissiveIntensity: 0.45,
+      roughness: 0.11,
+      metalness: 0.94,
+      clearcoat: 1.0,
+      envMapIntensity: 2.2,
     }),
     ruby: new THREE.MeshPhysicalMaterial({
       color: 0xff1744,
-      emissive: 0x7a001e,
-      roughness: 0.06,
+      emissive: 0xb8002e,
+      emissiveIntensity: 0.9,
+      roughness: 0.03,
       clearcoat: 1.0,
     }),
-    crate1: new THREE.MeshStandardMaterial({
+    crate1: new THREE.MeshPhysicalMaterial({
       color: 0xd98a2b,
+      roughness: 0.36,
+      metalness: 0.06,
+      clearcoat: 0.32,
+      normalMap: maps.woodNormal,
+      normalScale: new THREE.Vector2(0.55, 0.55),
+    }),
+    crate1Trim: new THREE.MeshPhysicalMaterial({
+      color: 0x8a480b,
       roughness: 0.42,
-      metalness: 0.08,
+      normalMap: maps.woodNormal,
+      normalScale: new THREE.Vector2(0.45, 0.45),
     }),
-    crate1Trim: new THREE.MeshStandardMaterial({
-      color: 0x8f4d0e,
-      roughness: 0.5,
+    crate2: new THREE.MeshPhysicalMaterial({
+      color: 0x7d4012,
+      roughness: 0.38,
+      metalness: 0.16,
+      clearcoat: 0.35,
+      normalMap: maps.woodNormal,
+      normalScale: new THREE.Vector2(0.65, 0.65),
     }),
-    crate2: new THREE.MeshStandardMaterial({
-      color: 0x8a4b19,
-      roughness: 0.45,
-      metalness: 0.18,
+    iron: new THREE.MeshPhysicalMaterial({
+      color: 0xe2e8f0,
+      roughness: 0.18,
+      metalness: 0.92,
+      clearcoat: 0.65,
+      envMapIntensity: 1.9,
     }),
-    iron: new THREE.MeshStandardMaterial({
-      color: 0xd8e2ef,
-      roughness: 0.25,
-      metalness: 0.82,
-    }),
+    // True Refractive Glacier Ice Cube!
     ice1: new THREE.MeshPhysicalMaterial({
-      color: 0x9be7ff,
+      color: 0xb8f0ff,
       emissive: 0x0d4f78,
-      transparent: true,
-      opacity: 0.45,
-      roughness: 0.06,
+      emissiveIntensity: 0.25,
+      roughness: 0.05,
       clearcoat: 1.0,
+      transmission: 0.68,
+      thickness: 0.9,
+      ior: 1.31,
+      normalMap: maps.iceCrackNormal,
+      normalScale: new THREE.Vector2(0.38, 0.38),
+      envMapIntensity: 2.0,
     }),
     ice2: new THREE.MeshPhysicalMaterial({
-      color: 0x5ccdff,
-      emissive: 0x083b66,
-      transparent: true,
-      opacity: 0.68,
+      color: 0x6cd4ff,
+      emissive: 0x0a4375,
+      emissiveIntensity: 0.35,
       roughness: 0.08,
       clearcoat: 1.0,
+      transmission: 0.48,
+      thickness: 1.2,
+      ior: 1.34,
+      normalMap: maps.iceCrackNormal,
+      normalScale: new THREE.Vector2(0.65, 0.65),
+      envMapIntensity: 2.0,
     }),
     slime: new THREE.MeshPhysicalMaterial({
-      color: 0x3ef068,
-      emissive: 0x0c591f,
-      transparent: true,
-      opacity: 0.58,
-      roughness: 0.08,
+      color: 0x46f56c,
+      emissive: 0x0f6924,
+      emissiveIntensity: 0.35,
+      roughness: 0.04,
       clearcoat: 1.0,
+      transmission: 0.58,
+      thickness: 0.75,
+      ior: 1.42,
+      envMapIntensity: 1.9,
     }),
     contactShadow: new THREE.MeshBasicMaterial({
-      color: 0x060913,
+      color: 0x040711,
       transparent: true,
-      opacity: 0.36,
+      opacity: 0.44,
       depthWrite: false,
     }),
   };
@@ -369,39 +446,39 @@ function buildBaseCandySculpture(color: CandyColor): THREE.Group {
 
   switch (color) {
     case 'red': {
-      // 1. Red Strawberry Candy
       const berry = new THREE.Mesh(g.strawberryBody, m.red);
+      berry.castShadow = true;
       berry.rotation.z = -0.14;
-      group.add(berry);
+      const core = new THREE.Mesh(g.innerGlowCore, m.redInner);
+      berry.add(core);
 
-      // Tiny golden seeds around berry
-      for (let i = 0; i < 8; i++) {
-        const ang = (i / 8) * Math.PI * 2;
-        const rowY = i % 2 === 0 ? 0.03 : -0.12;
-        const rad = i % 2 === 0 ? 0.34 : 0.26;
+      for (let i = 0; i < 12; i++) {
+        const ang = (i / 12) * Math.PI * 2;
+        const rowY = i % 3 === 0 ? 0.08 : i % 3 === 1 ? -0.05 : -0.17;
+        const rad = i % 3 === 0 ? 0.35 : i % 3 === 1 ? 0.32 : 0.23;
         const seed = new THREE.Mesh(g.strawberrySeed, m.seed);
         seed.position.set(Math.cos(ang) * rad, rowY, Math.sin(ang) * rad);
         berry.add(seed);
       }
 
-      // 4-leaf green crown calyx on top
       const crown = new THREE.Group();
-      crown.position.set(0, 0.35, 0);
-      for (let k = 0; k < 4; k++) {
+      crown.position.set(0, 0.36, 0);
+      for (let k = 0; k < 5; k++) {
         const lf = new THREE.Mesh(g.leaf, m.leaf);
-        const a = (k / 4) * Math.PI * 2 + 0.4;
-        lf.position.set(Math.cos(a) * 0.11, 0, Math.sin(a) * 0.11);
+        const a = (k / 5) * Math.PI * 2 + 0.3;
+        lf.position.set(Math.cos(a) * 0.115, 0, Math.sin(a) * 0.115);
         lf.rotation.y = -a;
-        lf.rotation.z = -0.25;
+        lf.rotation.z = -0.22;
         crown.add(lf);
       }
       berry.add(crown);
+      group.add(berry);
       break;
     }
 
     case 'blue': {
-      // 2. Blue Crystal Candy
       const gem = new THREE.Mesh(g.crystalBody, m.blue);
+      gem.castShadow = true;
       gem.rotation.z = 0.15;
       const core = new THREE.Mesh(g.crystalInner, m.blueCore);
       gem.add(core);
@@ -410,15 +487,19 @@ function buildBaseCandySculpture(color: CandyColor): THREE.Group {
     }
 
     case 'yellow': {
-      // 3. Yellow Lemon Candy
-      const lemon = new THREE.Mesh(g.lemonBody, m.yellow);
-      group.add(lemon);
+      const mango = new THREE.Mesh(g.lemonBody, m.yellow);
+      mango.castShadow = true;
+      const tipLeaf = new THREE.Mesh(g.leaf, m.leaf);
+      tipLeaf.position.set(-0.12, 0.36, 0.04);
+      tipLeaf.rotation.z = 0.45;
+      mango.add(tipLeaf);
+      group.add(mango);
       break;
     }
 
     case 'green': {
-      // 4. Green Apple Candy
       const apple = new THREE.Mesh(g.appleBody, m.green);
+      apple.castShadow = true;
       const stem = new THREE.Mesh(g.appleStem, m.stem);
       stem.position.set(0, 0.33, 0);
       stem.rotation.z = -0.2;
@@ -428,12 +509,15 @@ function buildBaseCandySculpture(color: CandyColor): THREE.Group {
       lf.position.set(0.12, 0.34, 0.04);
       lf.rotation.z = 0.35;
       apple.add(lf);
+
+      const dew = new THREE.Mesh(g.dewDrop, m.waterDrop);
+      dew.position.set(-0.22, 0.12, 0.31);
+      apple.add(dew);
       group.add(apple);
       break;
     }
 
     case 'purple': {
-      // 5. Purple Grape Cluster Candy
       const bunch = new THREE.Group();
       const offsets: Array<[number, number, number]> = [
         [-0.14, 0.15, 0.05],
@@ -441,14 +525,19 @@ function buildBaseCandySculpture(color: CandyColor): THREE.Group {
         [0, 0.16, -0.12],
         [-0.15, -0.04, 0.09],
         [0.15, -0.04, 0.09],
-        [0, -0.02, 0.18],
+        [0, -0.02, 0.19],
         [0, -0.22, 0.06],
       ];
       for (const [ox, oy, oz] of offsets) {
         const gp = new THREE.Mesh(g.grapeSphere, m.purple);
+        gp.castShadow = true;
         gp.position.set(ox, oy, oz);
         bunch.add(gp);
       }
+      const dew = new THREE.Mesh(g.dewDrop, m.waterDrop);
+      dew.position.set(0.08, 0.04, 0.34);
+      bunch.add(dew);
+
       const lf = new THREE.Mesh(g.leaf, m.leaf);
       lf.position.set(0.06, 0.31, 0.06);
       lf.rotation.z = 0.25;
@@ -459,11 +548,11 @@ function buildBaseCandySculpture(color: CandyColor): THREE.Group {
     }
 
     case 'orange': {
-      // 6. Orange Caramel Swirl Candy
       const pad = new THREE.Mesh(g.caramelBase, m.orange);
+      pad.castShadow = true;
+      pad.rotation.z = 0.08;
       const swirl = new THREE.Mesh(g.caramelSwirl, m.creamSwirl);
-      swirl.position.set(0, 0.06, 0.16);
-      swirl.rotation.x = -0.2;
+      swirl.position.set(0, 0, 0.2);
       pad.add(swirl);
       group.add(pad);
       break;
@@ -478,9 +567,8 @@ export function createCandyMesh3D(color: CandyColor, special: SpecialType): THRE
   const m = getMats();
   const root = new THREE.Group();
 
-  // Soft contact shadow disc slightly behind piece
   const shadow = new THREE.Mesh(g.shadowDisc, m.contactShadow);
-  shadow.position.set(0.04, -0.08, -0.28);
+  shadow.position.set(0.05, -0.09, -0.28);
   root.add(shadow);
 
   const visual = new THREE.Group();
@@ -518,17 +606,15 @@ export function createCandyMesh3D(color: CandyColor, special: SpecialType): THRE
   }
 
   if (special === 'rainbow') {
-    // Rainbow Color Bomb with reflective multi-colored crystal particles!
     const core = new THREE.Mesh(g.rainbowSphere, m.rainbowBody);
     visual.add(core);
 
     const gemColors: CandyColor[] = ['red', 'orange', 'yellow', 'green', 'blue', 'purple'];
-    // Fibonacci sphere placement for 14 vivid gems
-    const count = 14;
+    const count = 16;
     for (let i = 0; i < count; i++) {
       const phi = Math.acos(1 - (2 * (i + 0.5)) / count);
       const theta = Math.PI * (1 + Math.sqrt(5)) * i;
-      const r = 0.39;
+      const r = 0.395;
       const gx = r * Math.sin(phi) * Math.cos(theta);
       const gy = r * Math.sin(phi) * Math.sin(theta);
       const gz = r * Math.cos(phi);
@@ -547,9 +633,7 @@ export function createCandyMesh3D(color: CandyColor, special: SpecialType): THRE
   }
 
   if (special === 'bomb') {
-    // Glowing Energy Bomb Candy
     const bomb = new THREE.Mesh(g.bombSphere, m.bombCore);
-    // Colored candy accent ring so player also sees its color!
     const colorBand = new THREE.Mesh(g.stripeBand, m[color]);
     bomb.add(colorBand);
 
@@ -563,7 +647,7 @@ export function createCandyMesh3D(color: CandyColor, special: SpecialType): THRE
     for (const [vx, vy, vz] of ventDirs) {
       const vent = new THREE.Mesh(g.bombVent, m.bombEnergy);
       vent.position.set(vx, vy, vz);
-      vent.lookAt(vx * 2, vy * 2, vz * 2);
+      vent.lookAt(vx * 2, gyOrZero(vy), vz * 2);
       vent.rotateX(Math.PI * 0.5);
       bomb.add(vent);
     }
@@ -574,16 +658,14 @@ export function createCandyMesh3D(color: CandyColor, special: SpecialType): THRE
     return root;
   }
 
-  // Base sculpted fruit/crystal candy
   const baseCandy = buildBaseCandySculpture(color);
   visual.add(baseCandy);
 
-  // Add Striped directional glowing bands
   if (special === 'striped_h' || special === 'striped_v') {
     const stripeGroup = new THREE.Group();
     for (const offset of [-0.14, 0, 0.14]) {
       const band = new THREE.Mesh(g.stripeBand, m.stripeGlow);
-      band.scale.setScalar(offset === 0 ? 1.03 : 0.88);
+      band.scale.setScalar(offset === 0 ? 1.04 : 0.88);
       if (special === 'striped_h') {
         band.rotation.x = Math.PI * 0.5;
         band.position.y = offset;
@@ -596,21 +678,24 @@ export function createCandyMesh3D(color: CandyColor, special: SpecialType): THRE
     visual.add(stripeGroup);
   }
 
-  // Add Wrapped 3D Translucent Cellophane Wrapper + Bow Flutes!
   if (special === 'wrapped') {
     const shell = new THREE.Mesh(g.wrapperBox, m.wrapperShell);
     const leftBow = new THREE.Mesh(g.wrapperFlute, m.wrapperShell);
     leftBow.rotation.z = Math.PI * 0.5;
-    leftBow.position.set(-0.46, 0, 0);
+    leftBow.position.set(-0.47, 0, 0);
 
     const rightBow = new THREE.Mesh(g.wrapperFlute, m.wrapperShell);
     rightBow.rotation.z = -Math.PI * 0.5;
-    rightBow.position.set(0.46, 0, 0);
+    rightBow.position.set(0.47, 0, 0);
 
     visual.add(shell, leftBow, rightBow);
   }
 
   return root;
+}
+
+function gyOrZero(v: number) {
+  return v * 2;
 }
 
 export function createBlockerMesh3D(blocker: BlockerType): THREE.Group | null {
@@ -622,6 +707,8 @@ export function createBlockerMesh3D(blocker: BlockerType): THREE.Group | null {
   if (blocker === 'crate_1' || blocker === 'crate_2') {
     const mainMat = blocker === 'crate_2' ? m.crate2 : m.crate1;
     const box = new THREE.Mesh(g.crateBox, mainMat);
+    box.castShadow = true;
+    box.receiveShadow = true;
     group.add(box);
 
     const p1 = new THREE.Mesh(g.cratePlank, m.crate1Trim);
@@ -631,11 +718,11 @@ export function createBlockerMesh3D(blocker: BlockerType): THREE.Group | null {
     group.add(p1, p2);
 
     if (blocker === 'crate_2') {
-      for (const sx of [-0.33, 0.33]) {
-        for (const sy of [-0.33, 0.33]) {
+      for (const sx of [-0.32, 0.32]) {
+        for (const sy of [-0.32, 0.32]) {
           const rivet = new THREE.Mesh(g.strawberrySeed, m.iron);
-          rivet.scale.setScalar(2.4);
-          rivet.position.set(sx, sy, 0.2);
+          rivet.scale.setScalar(2.6);
+          rivet.position.set(sx, sy, 0.21);
           group.add(rivet);
         }
       }
@@ -651,24 +738,39 @@ export function createBlockerMesh3D(blocker: BlockerType): THREE.Group | null {
   }
 
   if (blocker === 'chain') {
-    const c1 = new THREE.Mesh(g.chainBar, m.iron);
-    c1.rotation.z = Math.PI * 0.25;
-    c1.position.z = 0.35;
-    const c2 = new THREE.Mesh(g.chainBar, m.iron);
-    c2.rotation.z = -Math.PI * 0.25;
-    c2.position.z = 0.35;
+    // Realistic interlocking 3D steel chain links + gleaming brass padlock!
+    const offsets = [-0.28, -0.1, 0.1, 0.28];
+    for (let i = 0; i < offsets.length; i++) {
+      const d = offsets[i];
+      const linkA = new THREE.Mesh(g.chainLink, m.iron);
+      linkA.position.set(d, d, 0.35);
+      linkA.rotation.z = Math.PI * 0.25;
+      linkA.rotation.x = i % 2 === 0 ? 0.45 : -0.45;
+
+      const linkB = new THREE.Mesh(g.chainLink, m.iron);
+      linkB.position.set(d, -d, 0.35);
+      linkB.rotation.z = -Math.PI * 0.25;
+      linkB.rotation.x = i % 2 === 0 ? -0.45 : 0.45;
+      group.add(linkA, linkB);
+    }
 
     const lock = new THREE.Mesh(g.keyBit, m.gold);
-    lock.scale.set(1.8, 3.2, 2.2);
-    lock.position.set(0, -0.02, 0.42);
-    group.add(c1, c2, lock);
+    lock.scale.set(1.9, 3.3, 2.4);
+    lock.position.set(0, -0.02, 0.45);
+    group.add(lock);
     return group;
   }
 
   if (blocker === 'slime') {
     const slime = new THREE.Mesh(g.slimeDome, m.slime);
-    slime.scale.set(1.02, 1.02, 0.65);
+    slime.scale.set(1.02, 1.02, 0.66);
     slime.position.z = 0.18;
+    // Internal suspended 3D air bubbles inside translucent slime!
+    for (const [bx, by, bz] of [[-0.16, 0.14, 0.12], [0.18, -0.1, 0.15], [0.04, 0.2, 0.1]]) {
+      const bub = new THREE.Mesh(g.dewDrop, m.waterDrop);
+      bub.position.set(bx, by, bz);
+      slime.add(bub);
+    }
     group.add(slime);
     return group;
   }
@@ -682,27 +784,24 @@ export function createHintHand3D(): THREE.Group {
   const gloveMat = new THREE.MeshPhysicalMaterial({
     color: 0xfff8f2,
     emissive: 0x3b2219,
-    roughness: 0.18,
-    clearcoat: 0.85,
+    roughness: 0.16,
+    clearcoat: 0.9,
   });
   const cuffMat = new THREE.MeshPhysicalMaterial({
     color: 0xff3b7f,
-    roughness: 0.2,
-    clearcoat: 0.9,
+    roughness: 0.18,
+    clearcoat: 0.95,
   });
 
   const body = new THREE.Group();
   body.rotation.z = 0.38;
   body.rotation.x = -0.22;
 
-  const palm = new THREE.Mesh(new THREE.SphereGeometry(0.24, 16, 14), gloveMat);
+  const palm = new THREE.Mesh(new THREE.SphereGeometry(0.24, 18, 16), gloveMat);
   palm.scale.set(1.05, 1.1, 0.65);
   body.add(palm);
 
-  const indexFinger = new THREE.Mesh(
-    new THREE.CapsuleGeometry(0.075, 0.28, 8, 12),
-    gloveMat
-  );
+  const indexFinger = new THREE.Mesh(new THREE.CapsuleGeometry(0.075, 0.28, 8, 12), gloveMat);
   indexFinger.position.set(-0.06, 0.28, 0.04);
   body.add(indexFinger);
 

@@ -1,4 +1,9 @@
 import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import {
   BlockerType,
   CandyColor,
@@ -8,10 +13,10 @@ import {
   SpecialType,
   TaskProgress,
 } from '../types/game';
-import { HintMove, isSolidBlocker } from '../engine/match3';
+import { HintMove } from '../engine/match3';
 import { createCandyStudioEnvironment, setupCinematicLights, StudioLights } from './studioEnv';
+import { getProceduralPBRMaps } from './proceduralTextures3D';
 import {
-  CANDY_HEX,
   createBlockerMesh3D,
   createCandyMesh3D,
   createHintHand3D,
@@ -79,8 +84,11 @@ export class RescueWorld3D {
   public renderer: THREE.WebGLRenderer;
   public scene: THREE.Scene;
   public camera: THREE.PerspectiveCamera;
+  private composer: EffectComposer;
   private lights: StudioLights;
   private envTex: THREE.Texture;
+  private liquidNormalTex: THREE.Texture;
+  private fireflies: Array<{ mesh: THREE.Mesh; bx: number; by: number; bz: number; phase: number }> = [];
 
   private level: LevelConfig;
   private boardOriginX: number;
@@ -157,15 +165,26 @@ export class RescueWorld3D {
     this.camera.position.set(0, 0.35, 21.2);
     this.camera.lookAt(0, 0.05, 0);
 
+    // Photorealistic HDR Post-Processing Pipeline (ACES + Selective UnrealBloom)
+    this.composer = new EffectComposer(this.renderer);
+    this.composer.addPass(new RenderPass(this.scene, this.camera));
+    const bloomPass = new UnrealBloomPass(new THREE.Vector2(520, 770), 0.34, 0.52, 0.86);
+    this.composer.addPass(bloomPass);
+    this.composer.addPass(new OutputPass());
+
+    const maps = getProceduralPBRMaps();
+    this.liquidNormalTex = maps.liquidWaveNormal.clone();
+    this.liquidNormalTex.needsUpdate = true;
+
     this.lights = setupCinematicLights(this.scene);
 
     this.marbleMats = {
-      red: new THREE.MeshPhysicalMaterial({ color: 0xff1e4d, roughness: 0.08, clearcoat: 1 }),
-      blue: new THREE.MeshPhysicalMaterial({ color: 0x0ea5e9, roughness: 0.08, clearcoat: 1 }),
-      yellow: new THREE.MeshPhysicalMaterial({ color: 0xfacc15, roughness: 0.08, clearcoat: 1 }),
-      green: new THREE.MeshPhysicalMaterial({ color: 0x22c55e, roughness: 0.08, clearcoat: 1 }),
-      purple: new THREE.MeshPhysicalMaterial({ color: 0xa855f7, roughness: 0.08, clearcoat: 1 }),
-      orange: new THREE.MeshPhysicalMaterial({ color: 0xf97316, roughness: 0.08, clearcoat: 1 }),
+      red: new THREE.MeshPhysicalMaterial({ color: 0xff1e4d, roughness: 0.04, clearcoat: 1, iridescence: 0.25, envMapIntensity: 1.8 }),
+      blue: new THREE.MeshPhysicalMaterial({ color: 0x0ea5e9, roughness: 0.03, clearcoat: 1, transmission: 0.45, ior: 1.5, envMapIntensity: 1.9 }),
+      yellow: new THREE.MeshPhysicalMaterial({ color: 0xfacc15, roughness: 0.04, clearcoat: 1, envMapIntensity: 1.8 }),
+      green: new THREE.MeshPhysicalMaterial({ color: 0x22c55e, roughness: 0.04, clearcoat: 1, envMapIntensity: 1.8 }),
+      purple: new THREE.MeshPhysicalMaterial({ color: 0xa855f7, roughness: 0.04, clearcoat: 1, sheen: 0.5, envMapIntensity: 1.8 }),
+      orange: new THREE.MeshPhysicalMaterial({ color: 0xf97316, roughness: 0.04, clearcoat: 1, envMapIntensity: 1.8 }),
     };
 
     this.scene.add(this.arenaGroup);
@@ -228,108 +247,188 @@ export class RescueWorld3D {
   }
 
   private buildFantasyBackdrop() {
-    // Enchanted Regional Backdrop Wall & Pillars
-    const wallMat = new THREE.MeshStandardMaterial({
+    const maps = getProceduralPBRMaps();
+
+    // Stone-Brick Normal-Mapped Regional Diorama Wall
+    const wallMat = new THREE.MeshPhysicalMaterial({
       color: this.level.themePalette?.wall ?? '#1e2d52',
-      roughness: 0.65,
-      metalness: 0.1,
+      roughness: 0.58,
+      metalness: 0.08,
+      clearcoat: 0.18,
+      normalMap: maps.stoneBrickNormal,
+      normalScale: new THREE.Vector2(0.55, 0.55),
     });
-    const backWall = new THREE.Mesh(new THREE.BoxGeometry(11.5, 15.5, 0.5), wallMat);
-    backWall.position.set(0, 0.2, -1.35);
+    const backWall = new THREE.Mesh(new THREE.BoxGeometry(11.8, 15.8, 0.5), wallMat);
+    backWall.position.set(0, 0.2, -1.38);
     backWall.receiveShadow = true;
     this.scene.add(backWall);
 
-    // Decorative Side Columns
+    // Decorative Side Columns + Lush 3D Canopy Foliage Clusters
     const pillarMat = new THREE.MeshPhysicalMaterial({
       color: this.level.themePalette?.pillar ?? '#ff5c8a',
-      roughness: 0.25,
-      clearcoat: 0.7,
+      roughness: 0.18,
+      metalness: 0.12,
+      clearcoat: 0.88,
+      envMapIntensity: 1.5,
     });
     const goldCapMat = new THREE.MeshPhysicalMaterial({
       color: 0xffcf40,
-      roughness: 0.2,
-      metalness: 0.8,
+      emissive: 0x4f3100,
+      emissiveIntensity: 0.35,
+      roughness: 0.14,
+      metalness: 0.88,
       clearcoat: 1,
+      envMapIntensity: 2.0,
     });
+    const foliageMat = new THREE.MeshPhysicalMaterial({
+      color: 0x16a34a,
+      emissive: 0x052e16,
+      emissiveIntensity: 0.28,
+      roughness: 0.36,
+      sheen: 0.45,
+      sheenColor: new THREE.Color(0x86efac),
+      clearcoat: 0.25,
+    });
+    const leafSphereGeo = new THREE.SphereGeometry(0.46, 16, 14);
 
     for (const side of [-1, 1]) {
-      const col = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.32, 13.8, 16), pillarMat);
+      const col = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.33, 13.9, 22), pillarMat);
       col.position.set(side * 4.55, 0.2, -0.75);
+      col.castShadow = true;
+      col.receiveShadow = true;
       this.scene.add(col);
 
       for (const capY of [-6.3, 0.95, 6.25]) {
-        const ring = new THREE.Mesh(new THREE.TorusGeometry(0.34, 0.08, 10, 20), goldCapMat);
+        const ring = new THREE.Mesh(new THREE.TorusGeometry(0.35, 0.082, 12, 24), goldCapMat);
         ring.rotation.x = Math.PI * 0.5;
         ring.position.set(side * 4.55, capY, -0.75);
         this.scene.add(ring);
       }
 
-      // Decorative Candy Finials at top corners!
+      // Lush 3D Botanical Garden Shrubs flanking upper arena!
+      for (const [ox, oy, sc] of [
+        [side * 4.55, 5.55, 1.0],
+        [side * 4.18, 5.95, 0.78],
+        [side * 4.78, 4.95, 0.72],
+      ]) {
+        const bush = new THREE.Mesh(leafSphereGeo, foliageMat);
+        bush.scale.setScalar(sc);
+        bush.position.set(ox, oy, -0.52);
+        this.scene.add(bush);
+      }
+
+      // Decorative Crystal-Candy Finials at top corners!
       const lolli = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.42, 0.42, 0.18, 20),
+        new THREE.OctahedronGeometry(0.42, 1),
         new THREE.MeshPhysicalMaterial({
-          color: side < 0 ? 0xff477e : 0x38bdf8,
-          roughness: 0.12,
+          color: side < 0 ? 0xff2a6d : 0x00c2ff,
+          emissive: side < 0 ? 0x6b0525 : 0x03446b,
+          emissiveIntensity: 0.55,
+          roughness: 0.05,
           clearcoat: 1,
+          transmission: 0.45,
+          ior: 1.5,
+          envMapIntensity: 2.0,
         })
       );
-      lolli.rotation.x = Math.PI * 0.5;
-      lolli.position.set(side * 4.55, 6.65, -0.65);
+      lolli.position.set(side * 4.55, 6.72, -0.62);
       this.scene.add(lolli);
+    }
+
+    // 14 Floating HDR Golden Firefly / Bokeh Motes for 3D Depth Parallax!
+    const moteGeo = new THREE.SphereGeometry(0.055, 10, 8);
+    const moteMat = new THREE.MeshBasicMaterial({
+      color: new THREE.Color(2.2, 1.85, 0.75), // Triggers subtle HDR bloom!
+      transparent: true,
+      opacity: 0.85,
+    });
+    for (let i = 0; i < 14; i++) {
+      const m = new THREE.Mesh(moteGeo, moteMat);
+      const bx = (Math.random() - 0.5) * 8.6;
+      const by = -5.5 + Math.random() * 11.8;
+      const bz = -0.35 + Math.random() * 1.3;
+      m.position.set(bx, by, bz);
+      this.scene.add(m);
+      this.fireflies.push({ mesh: m, bx, by, bz, phase: i * 0.9 });
     }
   }
 
   private buildBoardTray3D() {
-    const trayW = this.level.cols * TILE_PITCH + 0.58;
-    const trayH = this.level.rows * TILE_PITCH + 0.58;
+    const maps = getProceduralPBRMaps();
+    const trayW = this.level.cols * TILE_PITCH + 0.62;
+    const trayH = this.level.rows * TILE_PITCH + 0.62;
 
-    // Outer Beveled Frame
+    // Luxury Beveled Gold/Caramel Frame (RoundedBoxGeometry eliminates sharp CG corners!)
     const frameMat = new THREE.MeshPhysicalMaterial({
       color: this.level.themePalette?.tray ?? '#f59e0b',
       emissive: 0x2b1103,
-      roughness: 0.22,
-      metalness: 0.35,
-      clearcoat: 0.9,
+      roughness: 0.16,
+      metalness: 0.45,
+      clearcoat: 1.0,
+      clearcoatRoughness: 0.08,
+      normalMap: maps.woodNormal,
+      normalScale: new THREE.Vector2(0.18, 0.18),
+      envMapIntensity: 1.85,
     });
-    const outerTray = new THREE.Mesh(new THREE.BoxGeometry(trayW, trayH, 0.42), frameMat);
-    outerTray.position.set(0, BOARD_CENTER_Y, -0.32);
+    const outerTray = new THREE.Mesh(
+      new RoundedBoxGeometry(trayW, trayH, 0.46, 5, 0.12),
+      frameMat
+    );
+    outerTray.position.set(0, BOARD_CENTER_Y, -0.34);
     outerTray.receiveShadow = true;
     this.boardGroup.add(outerTray);
 
     // Inner Royal-Sapphire Velvet Board Backing
-    const innerMat = new THREE.MeshStandardMaterial({
-      color: 0x13203d,
-      roughness: 0.55,
+    const innerMat = new THREE.MeshPhysicalMaterial({
+      color: 0x0f1b36,
+      roughness: 0.42,
+      sheen: 0.5,
+      sheenColor: new THREE.Color(0x3b82f6),
+      clearcoat: 0.25,
     });
     const innerTray = new THREE.Mesh(
-      new THREE.BoxGeometry(trayW - 0.28, trayH - 0.28, 0.44),
+      new RoundedBoxGeometry(trayW - 0.28, trayH - 0.28, 0.46, 4, 0.08),
       innerMat
     );
-    innerTray.position.set(0, BOARD_CENTER_Y, -0.26);
+    innerTray.position.set(0, BOARD_CENTER_Y, -0.27);
+    innerTray.receiveShadow = true;
     this.boardGroup.add(innerTray);
 
-    // Individual Recessed 3D Tile Wells
-    const tileLight = new THREE.MeshStandardMaterial({ color: 0x223660, roughness: 0.45 });
-    const tileDark = new THREE.MeshStandardMaterial({ color: 0x19294d, roughness: 0.5 });
-    const tileDrain = new THREE.MeshStandardMaterial({
-      color: 0x4a3418,
+    // Individual Beveled 3D Tile Wells with Porcelain/Glass Polish
+    const tileLight = new THREE.MeshPhysicalMaterial({
+      color: 0x213663,
+      roughness: 0.28,
+      clearcoat: 0.55,
+      envMapIntensity: 1.3,
+    });
+    const tileDark = new THREE.MeshPhysicalMaterial({
+      color: 0x16264a,
+      roughness: 0.32,
+      clearcoat: 0.5,
+      envMapIntensity: 1.2,
+    });
+    const tileDrain = new THREE.MeshPhysicalMaterial({
+      color: 0x543814,
       emissive: 0x291802,
-      roughness: 0.38,
+      roughness: 0.25,
+      metalness: 0.28,
+      clearcoat: 0.75,
     });
     const tileFlood = new THREE.MeshPhysicalMaterial({
       color: 0x0e7490,
       emissive: 0x083344,
-      roughness: 0.16,
-      clearcoat: 0.9,
+      roughness: 0.12,
+      clearcoat: 0.95,
     });
-    const tileWind = new THREE.MeshStandardMaterial({
-      color: 0x115e59,
+    const tileWind = new THREE.MeshPhysicalMaterial({
+      color: 0x0f766e,
       emissive: 0x042f2e,
-      roughness: 0.35,
+      roughness: 0.22,
+      clearcoat: 0.8,
     });
-    const tileGeo = new THREE.BoxGeometry(TILE_PITCH * 0.92, TILE_PITCH * 0.92, 0.08);
-    const arrowGeo = new THREE.ConeGeometry(0.12, 0.2, 4);
-    const arrowMat = new THREE.MeshBasicMaterial({ color: 0xffde59 });
+    const tileGeo = new RoundedBoxGeometry(TILE_PITCH * 0.92, TILE_PITCH * 0.92, 0.09, 3, 0.03);
+    const arrowGeo = new THREE.ConeGeometry(0.12, 0.2, 6);
+    const arrowMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(1.8, 1.5, 0.35) });
 
     const hasKeysTask = this.level.tasks.some((t) => t.kind === 'keys');
     const windRowSet = new Set((this.level.windRows ?? []).map((w) => w.row));
@@ -351,7 +450,8 @@ export class RescueWorld3D {
                 ? tileLight
                 : tileDark;
         const well = new THREE.Mesh(tileGeo, mat);
-        well.position.set(pos.x, pos.y, -0.04);
+        well.receiveShadow = true;
+        well.position.set(pos.x, pos.y, -0.05);
         this.boardGroup.add(well);
 
         const keyExitRow =
@@ -366,17 +466,53 @@ export class RescueWorld3D {
         }
       }
     }
+
+    // Translucent 3D Rippling Monsoon Water Surface over Submerged Rows!
+    if (this.level.submergedFromRow !== undefined && this.level.submergedFromRow < this.level.rows) {
+      const subRows = this.level.rows - this.level.submergedFromRow;
+      const waterH = subRows * TILE_PITCH;
+      const topRowY = this.cellToWorld(this.level.submergedFromRow, 0).y + TILE_PITCH * 0.5;
+      const waterCenterY = topRowY - waterH * 0.5;
+      const waterMat = new THREE.MeshPhysicalMaterial({
+        color: 0x38bdf8,
+        emissive: 0x0369a1,
+        emissiveIntensity: 0.22,
+        roughness: 0.04,
+        clearcoat: 1.0,
+        transmission: 0.62,
+        thickness: 0.6,
+        ior: 1.333,
+        normalMap: this.liquidNormalTex,
+        normalScale: new THREE.Vector2(0.35, 0.35),
+        transparent: true,
+        opacity: 0.42,
+        envMapIntensity: 2.0,
+      });
+      const waterPlane = new THREE.Mesh(
+        new THREE.PlaneGeometry(this.level.cols * TILE_PITCH, waterH),
+        waterMat
+      );
+      waterPlane.position.set(0, waterCenterY, 0.54);
+      this.boardGroup.add(waterPlane);
+    }
   }
 
   private addWallBeam(x: number, y: number, w: number, h: number, color = 0xf9841a) {
+    const maps = getProceduralPBRMaps();
     const mat = new THREE.MeshPhysicalMaterial({
       color,
       emissive: 0x3b1702,
-      roughness: 0.22,
-      metalness: 0.12,
-      clearcoat: 0.85,
+      roughness: 0.18,
+      metalness: 0.18,
+      clearcoat: 0.92,
+      normalMap: maps.woodNormal,
+      normalScale: new THREE.Vector2(0.26, 0.26),
+      envMapIntensity: 1.65,
     });
-    const beam = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.68), mat);
+    const beam = new THREE.Mesh(
+      new RoundedBoxGeometry(w, h, 0.68, 3, Math.min(0.06, Math.min(w, h) * 0.25)),
+      mat
+    );
     beam.position.set(x, y, 0.1);
     beam.castShadow = true;
     beam.receiveShadow = true;
@@ -400,14 +536,14 @@ export class RescueWorld3D {
 
     const vortex = new THREE.Mesh(
       new THREE.CircleGeometry(0.5, 28),
-      new THREE.MeshBasicMaterial({ color: 0xfff3b0 })
+      new THREE.MeshBasicMaterial({ color: new THREE.Color(2.1, 1.85, 0.9) })
     );
     vortex.position.z = -0.04;
     this.portalGroup.add(vortex);
 
     this.portalRing = new THREE.Mesh(
-      new THREE.TorusGeometry(0.34, 0.035, 8, 24),
-      new THREE.MeshBasicMaterial({ color: 0xff8800 })
+      new THREE.TorusGeometry(0.34, 0.038, 10, 28),
+      new THREE.MeshBasicMaterial({ color: new THREE.Color(2.4, 1.05, 0.15) })
     );
     this.portalRing.position.z = 0.04;
     this.portalGroup.add(this.portalRing);
@@ -418,14 +554,18 @@ export class RescueWorld3D {
 
   private addGate3D(x: number, y: number, w: number, h: number, hexColor: number) {
     const gate = new THREE.Mesh(
-      new THREE.BoxGeometry(w, h, 0.56),
+      new RoundedBoxGeometry(w, h, 0.56, 3, Math.min(0.05, Math.min(w, h) * 0.22)),
       new THREE.MeshPhysicalMaterial({
         color: hexColor,
-        roughness: 0.2,
-        metalness: 0.72,
-        clearcoat: 0.9,
+        emissive: hexColor,
+        emissiveIntensity: 0.18,
+        roughness: 0.14,
+        metalness: 0.78,
+        clearcoat: 1.0,
+        envMapIntensity: 1.9,
       })
     );
+    gate.castShadow = true;
     gate.position.set(x, y, 0.15);
     gate.userData = { baseY: y, baseH: h };
     this.arenaGroup.add(gate);
@@ -468,13 +608,16 @@ export class RescueWorld3D {
     const cy = (yMin + yMax) * 0.5;
 
     const glass = new THREE.Mesh(
-      new THREE.BoxGeometry(w, h, 0.52),
+      new RoundedBoxGeometry(w, h, 0.54, 4, 0.07),
       new THREE.MeshPhysicalMaterial({
-        color: 0xbbeeff,
-        transparent: true,
-        opacity: 0.24,
-        roughness: 0.05,
-        clearcoat: 1,
+        color: 0xdff6ff,
+        roughness: 0.03,
+        clearcoat: 1.0,
+        transmission: 0.74,
+        thickness: 0.65,
+        ior: 1.49,
+        iridescence: 0.28,
+        envMapIntensity: 2.1,
       })
     );
     glass.position.set(cx, cy, 0.2);
@@ -529,14 +672,17 @@ export class RescueWorld3D {
       this.arenaGroup.add(this.mochi.root);
       this.populateMarbles3D(this.level.initialMarbles);
     } else if (sc === 'lava_bridge') {
-      // Molten Caramel Sea at bottom of arena
-      const lavaGeo = new THREE.BoxGeometry(8.1, 1.45, 0.55, 24, 4, 2);
+      // Molten Caramel Magma Sea with Animated Normal Ripples + HDR Glow!
+      const lavaGeo = new RoundedBoxGeometry(8.1, 1.45, 0.58, 4, 0.1);
       const lavaMat = new THREE.MeshPhysicalMaterial({
-        color: 0xff6d00,
-        emissive: 0xd93800,
-        emissiveIntensity: 0.75,
-        roughness: 0.14,
+        color: 0xff6200,
+        emissive: 0xff3b00,
+        emissiveIntensity: 1.15,
+        roughness: 0.08,
         clearcoat: 1.0,
+        normalMap: this.liquidNormalTex,
+        normalScale: new THREE.Vector2(0.75, 0.75),
+        envMapIntensity: 1.8,
       });
       this.lavaMesh = new THREE.Mesh(lavaGeo, lavaMat);
       this.lavaMesh.position.set(0, 1.95, 0.12);
@@ -959,8 +1105,18 @@ export class RescueWorld3D {
     const height = canvas.clientHeight || 770;
     if (canvas.width !== Math.floor(width * this.renderer.getPixelRatio()) || canvas.height !== Math.floor(height * this.renderer.getPixelRatio())) {
       this.renderer.setSize(width, height, false);
+      this.composer.setSize(width, height);
       this.camera.aspect = width / height;
       this.camera.updateProjectionMatrix();
+    }
+
+    // Animate 3D Liquid Normal Waves (Lava & Monsoon Water) + Floating HDR Bokeh Fireflies!
+    this.liquidNormalTex.offset.x = (time * 0.14) % 1;
+    this.liquidNormalTex.offset.y = Math.sin(time * 0.65) * 0.18;
+    for (const ff of this.fireflies) {
+      ff.mesh.position.x = ff.bx + Math.sin(time * 0.9 + ff.phase) * 0.28;
+      ff.mesh.position.y = ff.by + Math.cos(time * 0.75 + ff.phase) * 0.32;
+      ff.mesh.scale.setScalar(0.75 + 0.35 * Math.sin(time * 3.2 + ff.phase));
     }
 
     this.stepPhysics(dt);
@@ -1234,10 +1390,12 @@ export class RescueWorld3D {
       surprisedTimer: state.surprisedTimer,
     });
 
-    this.renderer.render(this.scene, this.camera);
+    this.composer.render();
   }
 
   public dispose() {
+    this.liquidNormalTex.dispose();
+    this.composer.dispose();
     this.envTex.dispose();
     this.renderer.dispose();
   }

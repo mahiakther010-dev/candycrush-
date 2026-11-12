@@ -43,53 +43,67 @@ export function createMochiRig3D(): MochiRig3D {
   const root = new THREE.Group();
 
   const skinMat = new THREE.MeshPhysicalMaterial({
-    color: 0xfff7ed,
-    emissive: 0x3b2114,
-    emissiveIntensity: 0.35,
-    roughness: 0.32,
-    clearcoat: 0.35,
-    clearcoatRoughness: 0.4,
+    color: 0xfff6ed,
+    emissive: 0x422214,
+    emissiveIntensity: 0.34,
+    roughness: 0.28,
+    clearcoat: 0.28,
+    clearcoatRoughness: 0.42,
+    sheen: 0.35,
+    sheenColor: new THREE.Color(0xffd6cc),
+    envMapIntensity: 1.35,
   });
 
   const hairMat = new THREE.MeshPhysicalMaterial({
-    color: 0xffe4d6,
+    color: 0xffe3d3,
     emissive: 0x451c25,
     emissiveIntensity: 0.28,
-    roughness: 0.25,
-    clearcoat: 0.65,
-    clearcoatRoughness: 0.25,
+    roughness: 0.22,
+    clearcoat: 0.78,
+    clearcoatRoughness: 0.2,
+    sheen: 0.65,
+    sheenColor: new THREE.Color(0xfff0f5),
+    envMapIntensity: 1.65,
   });
 
   const earInnerMat = new THREE.MeshPhysicalMaterial({
     color: 0xff8fab,
     emissive: 0x4a0d22,
     emissiveIntensity: 0.25,
-    roughness: 0.28,
+    roughness: 0.26,
+    sheen: 0.55,
     clearcoat: 0.4,
   });
 
   const capeMat = new THREE.MeshPhysicalMaterial({
     color: 0xf43f6e,
     emissive: 0x4a071c,
-    emissiveIntensity: 0.3,
-    roughness: 0.26,
-    clearcoat: 0.55,
+    emissiveIntensity: 0.32,
+    roughness: 0.32,
+    sheen: 0.9,
+    sheenColor: new THREE.Color(0xffb3c6),
+    clearcoat: 0.45,
+    envMapIntensity: 1.5,
   });
 
   const skirtMat = new THREE.MeshPhysicalMaterial({
     color: 0xffcdd9,
     emissive: 0x3d1222,
     emissiveIntensity: 0.25,
-    roughness: 0.32,
-    clearcoat: 0.35,
+    roughness: 0.34,
+    sheen: 0.85,
+    sheenColor: new THREE.Color(0xffffff),
+    clearcoat: 0.3,
   });
 
   const goldMat = new THREE.MeshPhysicalMaterial({
     color: 0xffd147,
-    emissive: 0x5c3b00,
-    roughness: 0.16,
-    metalness: 0.8,
+    emissive: 0x6e4700,
+    emissiveIntensity: 0.65,
+    roughness: 0.12,
+    metalness: 0.92,
     clearcoat: 1.0,
+    envMapIntensity: 2.1,
   });
 
   const bootMat = new THREE.MeshPhysicalMaterial({
@@ -398,6 +412,12 @@ export function createMochiRig3D(): MochiRig3D {
   rightTear.position.set(0.19, -0.09, 0.41);
   rightTear.visible = false;
   headGroup.add(leftTear, rightTear);
+
+  root.traverse((obj) => {
+    if ((obj as THREE.Mesh).isMesh) {
+      obj.castShadow = true;
+    }
+  });
 
   return {
     root,
